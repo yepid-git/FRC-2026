@@ -172,7 +172,15 @@ void RobotInit(){
       rev::spark::SparkMax::PersistMode::kPersistParameters);
 
   wheelfl.GetEncoder().SetPosition(0);
+  wheelfr.GetEncoder().SetPosition(0);
+  wheelbl.GetEncoder().SetPosition(0);
+  wheelbr.GetEncoder().SetPosition(0);
+
   rotfl.GetEncoder().SetPosition(encfl.Get());
+  rotfr.GetEncoder().SetPosition(encfr.Get());
+  rotbl.GetEncoder().SetPosition(encbl.Get());
+  rotbr.GetEncoder().SetPosition(encbr.Get());
+  
 
   //idk what this is for tbh
   //configs something
