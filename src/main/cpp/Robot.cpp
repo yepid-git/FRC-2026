@@ -95,7 +95,7 @@ class Robot : public frc::TimedRobot {
   double speedfactor = 2000;
   //timer object
   frc::Timer time;
-  units::degree_t degr{d};
+
 
   //object for roborio's built in accelerometer, returns acceleration on all 3-axes in terms of g-force (1g = 9.8 m/s^2)
   frc::BuiltInAccelerometer acc;
@@ -108,7 +108,7 @@ class Robot : public frc::TimedRobot {
     m_frontLeftLocation, m_frontRightLocation, m_backLeftLocation,
         m_backRightLocation};
   frc::XboxController controller{0};
-  frc::XboxController controller2{1};
+  //frc::XboxController controller2{1}; maybe use later
   frc::SlewRateLimiter<units::meters_per_second> limitx{9_mps / .5_s};
   frc::SlewRateLimiter<units::meters_per_second> limity{9_mps / .5_s};
 
@@ -123,11 +123,12 @@ void RobotInit(){
   LimelightHelpers::setLEDMode_ForceOn("");
 
   //lots of configs
-  //Note: TUNE PID's Later  
+  //Note: TUNE PID's Later (maybe?)
   driveConfig
     .Inverted(true)
     .SetIdleMode(rev::spark::SparkBaseConfig::IdleMode::kBrake);
 
+  //might have to change conversion factors?
   driveConfig.encoder
   .PositionConversionFactor(1)
   .VelocityConversionFactor(1);
@@ -237,7 +238,9 @@ void TeleopInit() {
 }
 
 void TeleopPeriodic() {
-
+  //x, y, turn
+  //for now, just calling drive on it's own
+  Drive(controller.GetLeftY(), controller.GetLeftX(), controller.GetRightX());
 }
 
 void SetState(frc::SwerveModuleState optState, rev::spark::SparkMax& driveSpark, rev::spark::SparkMax& steerSpark){
@@ -253,6 +256,51 @@ void SetState(frc::SwerveModuleState optState, rev::spark::SparkMax& driveSpark,
 }
 
 void Drive(double x, double y, double rotate){
+  //grabs robot's angle relative to driver station, in other words it's current field orientation
+  d = 360 - ahrs->GetAngle();
+
+  units::degree_t degr{d};
+  frc::Rotation2d rot2d{degr}; //rot2d reflects the AHRS gyroscope orientation
+
+  frc::SmartDashboard::PutNumber("Drive:x", x);
+  frc::SmartDashboard::PutNumber("Drive:y", y);
+  frc::SmartDashboard::PutNumber("Drive:rotate", rotate);
+  frc::SmartDashboard::PutNumber("Drive: AHRS (rot2d)", rot2d.Degrees().value());
+  frc::SmartDashboard::PutNumber("encfl.Get", encfl.Get());
+  frc::SmartDashboard::PutNumber("encfr.Get", encfr.Get());
+  frc::SmartDashboard::PutNumber("encbl.Get", encbl.Get());
+  frc::SmartDashboard::PutNumber("encbr.Get", encbr.Get());
+
+
+  units::radians_per_second_t rad{rotate};
+  units::meters_per_second_t speedy{y};
+  units::meters_per_second_t speedx{x};
+  frc::ChassisSpeeds speeds = frc::ChassisSpeeds::FromFieldRelativeSpeeds(
+    limitx.Calculate(speedx),
+    limity.Calculate(speedy),
+    rad * 1.2,  // sensitivity multiplier?? increase if rotation is sluggish, decrease if jittery
+    rot2d  // This is what enables field-oriented control
+  );
+
+  //converts the speeds to swerve module states
+  auto [fl, fr, bl, br] = kinematics.ToSwerveModuleStates(speeds);
+
+
+  //experiment: getting wpilib to optimize angles instead (eliminating need for complex swerve math)
+  frc::Rotation2d flAngle{units::radian_t{rotfl.GetEncoder().GetPosition()}};
+  frc::Rotation2d frAngle{units::radian_t{rotfr.GetEncoder().GetPosition()}};
+  frc::Rotation2d blAngle{units::radian_t{rotbl.GetEncoder().GetPosition()}};
+  frc::Rotation2d brAngle{units::radian_t{rotbr.GetEncoder().GetPosition()}};
+
+  fl.Optimize(flAngle);
+  fr.Optimize(frAngle);
+  bl.Optimize(blAngle);
+  br.Optimize(brAngle);
+
+  SetState(fl, wheelfl, rotfl);
+  SetState(fr, wheelfr, rotfr);
+  SetState(bl, wheelbl, rotbl);
+  SetState(br, wheelbr, rotbr);
 
 }
 
