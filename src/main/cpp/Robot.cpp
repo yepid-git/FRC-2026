@@ -82,7 +82,7 @@ class Robot : public frc::TimedRobot {
 
 
   //shooter CAN ID's
-  //Note to self: MIGHT need encoder for rotsh
+  //Note to self: MIGHT need encoder for rotsh (plan is for continuous alignment with goal)
   rev::spark::SparkMax rotsh{21, rev::spark::SparkLowLevel::MotorType::kBrushless};
   rev::spark::SparkMax firesh{20, rev::spark::SparkLowLevel::MotorType::kBrushless};
 
@@ -101,7 +101,7 @@ class Robot : public frc::TimedRobot {
   frc::BuiltInAccelerometer acc;
 
   //AHRS: attitude and heading reference system
-    studica::AHRS *ahrs = new studica::AHRS(studica::AHRS::NavXComType::kUSB1);
+  studica::AHRS *ahrs = new studica::AHRS(studica::AHRS::NavXComType::kUSB1);
 
   //kinematics object
   frc::SwerveDriveKinematics<4> kinematics{
@@ -129,57 +129,67 @@ void RobotInit(){
     .SetIdleMode(rev::spark::SparkBaseConfig::IdleMode::kBrake);
 
   //might have to change conversion factors?
+  //wheel diameter = 4 inches = 0.1016 meters
+  //level unknown, change ratio based on level
+  //l3ratio = 6.12;
+  //l2ratio = 6.75;
+  //l1ratio = 8.14;
+  double gearratio = 6.12;
+
   driveConfig.encoder
-  .PositionConversionFactor(1)
-  .VelocityConversionFactor(1);
+    .PositionConversionFactor((PI * 0.1016) / gearratio)
+    .VelocityConversionFactor(((PI * 0.1016) / gearratio) / 60.0);
 
   driveConfig.closedLoop
-  .SetFeedbackSensor(rev::spark::FeedbackSensor::kPrimaryEncoder)
-  .Pid(0.0001, 0.000001, 0.00000001)
-  .IZone(4000);
+    .SetFeedbackSensor(rev::spark::FeedbackSensor::kPrimaryEncoder)
+    .Pid(0.0001, 0.000001, 0.00000001)
+    .IZone(4000);
 
   steerConfig
-  .Inverted(true)
-  .SetIdleMode(rev::spark::SparkBaseConfig::IdleMode::kBrake);
+    .Inverted(true)
+    .SetIdleMode(rev::spark::SparkBaseConfig::IdleMode::kBrake);
 
+
+  //steer ratio is 150/7:1
   steerConfig.encoder
-  .PositionConversionFactor(1)
-  .VelocityConversionFactor(1);
+    .PositionConversionFactor((2.0 * PI) / (150.0 / 7.0))
+    .VelocityConversionFactor(((2.0 * PI) / (150.0 / 7.0)) / 60.0);
 
   steerConfig.closedLoop
-  .SetFeedbackSensor(rev::spark::FeedbackSensor::kPrimaryEncoder)
-  .Pid(0.0001, 0.000001, 0.00000001)
-  .IZone(4000);
+    .SetFeedbackSensor(rev::spark::FeedbackSensor::kPrimaryEncoder)
+    .Pid(0.0001, 0.000001, 0.00000001)
+    .PositionWrappingEnabled(true)
+    .IZone(4000);
 
 
   //setting configurations for wheel and rotational motors
   wheelfl.Configure(driveConfig, rev::spark::SparkMax::ResetMode::kResetSafeParameters,
-      rev::spark::SparkMax::PersistMode::kPersistParameters);
+    rev::spark::SparkMax::PersistMode::kPersistParameters);
   wheelfr.Configure(driveConfig, rev::spark::SparkMax::ResetMode::kResetSafeParameters,
-      rev::spark::SparkMax::PersistMode::kPersistParameters);
+    rev::spark::SparkMax::PersistMode::kPersistParameters);
   wheelbl.Configure(driveConfig, rev::spark::SparkMax::ResetMode::kResetSafeParameters,
-      rev::spark::SparkMax::PersistMode::kPersistParameters);
+    rev::spark::SparkMax::PersistMode::kPersistParameters);
   wheelbr.Configure(driveConfig, rev::spark::SparkMax::ResetMode::kResetSafeParameters,
-      rev::spark::SparkMax::PersistMode::kPersistParameters);
+    rev::spark::SparkMax::PersistMode::kPersistParameters);
 
   rotfl.Configure(steerConfig, rev::spark::SparkMax::ResetMode::kResetSafeParameters,
-      rev::spark::SparkMax::PersistMode::kPersistParameters);
+    rev::spark::SparkMax::PersistMode::kPersistParameters);
   rotfr.Configure(steerConfig, rev::spark::SparkMax::ResetMode::kResetSafeParameters,
-      rev::spark::SparkMax::PersistMode::kPersistParameters);
+    rev::spark::SparkMax::PersistMode::kPersistParameters);
   rotbl.Configure(steerConfig, rev::spark::SparkMax::ResetMode::kResetSafeParameters,
-      rev::spark::SparkMax::PersistMode::kPersistParameters);
+    rev::spark::SparkMax::PersistMode::kPersistParameters);
   rotbr.Configure(steerConfig, rev::spark::SparkMax::ResetMode::kResetSafeParameters,
-      rev::spark::SparkMax::PersistMode::kPersistParameters);
+    rev::spark::SparkMax::PersistMode::kPersistParameters); 
 
   wheelfl.GetEncoder().SetPosition(0);
   wheelfr.GetEncoder().SetPosition(0);
   wheelbl.GetEncoder().SetPosition(0);
   wheelbr.GetEncoder().SetPosition(0);
 
-  rotfl.GetEncoder().SetPosition(encfl.Get());
-  rotfr.GetEncoder().SetPosition(encfr.Get());
-  rotbl.GetEncoder().SetPosition(encbl.Get());
-  rotbr.GetEncoder().SetPosition(encbr.Get());
+  rotfl.GetEncoder().SetPosition(encfl.Get() * 2.0 * PI);
+  rotfr.GetEncoder().SetPosition(encfr.Get()* 2.0 * PI);
+  rotbl.GetEncoder().SetPosition(encbl.Get() * 2.0 * PI);
+  rotbr.GetEncoder().SetPosition(encbr.Get()* 2.0 * PI);
   
 
   //idk what this is for tbh
@@ -248,7 +258,7 @@ void TeleopInit() {
 void TeleopPeriodic() {
   //x, y, turn
   //for now, just calling drive on it's own
-  Drive(controller.GetLeftY(), controller.GetLeftX(), controller.GetRightX());
+  Drive(-controller.GetLeftY(), -controller.GetLeftX(), -controller.GetRightX());
 }
 
 void SetState(frc::SwerveModuleState optState, rev::spark::SparkMax& driveSpark, rev::spark::SparkMax& steerSpark){
@@ -256,7 +266,6 @@ void SetState(frc::SwerveModuleState optState, rev::spark::SparkMax& driveSpark,
   double deltaAngle = optState.angle.Radians().value() - steerSpark.GetEncoder().GetPosition();
   if ((fabs(optState.speed.value()) < 0.001) && (fabs(deltaAngle) < angleThr)) {
     driveSpark.Set(0);
-    steerSpark.Set(0);
   } else {
     driveSpark.GetClosedLoopController().SetReference(optState.speed.value(), rev::spark::SparkBase::ControlType::kVelocity);
     steerSpark.GetClosedLoopController().SetReference(optState.angle.Radians().value(), rev::spark::SparkBase::ControlType::kPosition);
@@ -266,6 +275,10 @@ void SetState(frc::SwerveModuleState optState, rev::spark::SparkMax& driveSpark,
 void Drive(double x, double y, double rotate){
   //grabs robot's angle relative to driver station, in other words it's current field orientation
   d = 360 - ahrs->GetAngle();
+
+  if (std::abs(x) < 0.1) x = 0;
+  if (std::abs(y) < 0.1) y = 0;
+  if (std::abs(rotate) < 0.1) rotate = 0;
 
   units::degree_t degr{d};
   frc::Rotation2d rot2d{degr}; //rot2d reflects the AHRS gyroscope orientation
@@ -280,9 +293,10 @@ void Drive(double x, double y, double rotate){
   frc::SmartDashboard::PutNumber("encbr.Get", encbr.Get());
 
 
-  units::radians_per_second_t rad{rotate};
-  units::meters_per_second_t speedy{y};
-  units::meters_per_second_t speedx{x};
+  units::radians_per_second_t rad{rotate*8};
+  units::meters_per_second_t speedy{y*4};
+  units::meters_per_second_t speedx{x*4};
+  //uses the slewrate limiter to determine necessary chassis speeds
   frc::ChassisSpeeds speeds = frc::ChassisSpeeds::FromFieldRelativeSpeeds(
     limitx.Calculate(speedx),
     limity.Calculate(speedy),
@@ -300,15 +314,23 @@ void Drive(double x, double y, double rotate){
   frc::Rotation2d blAngle{units::radian_t{rotbl.GetEncoder().GetPosition()}};
   frc::Rotation2d brAngle{units::radian_t{rotbr.GetEncoder().GetPosition()}};
 
+
+  auto flOptimized = frc::SwerveModuleState::Optimize(fl, flAngle);
+  auto frOptimized = frc::SwerveModuleState::Optimize(fr, frAngle);
+  auto blOptimized = frc::SwerveModuleState::Optimize(bl, blAngle);
+  auto brOptimized = frc::SwerveModuleState::Optimize(br, brAngle);
+
+  /*
   fl.Optimize(flAngle);
   fr.Optimize(frAngle);
   bl.Optimize(blAngle);
   br.Optimize(brAngle);
+  */
 
-  SetState(fl, wheelfl, rotfl);
-  SetState(fr, wheelfr, rotfr);
-  SetState(bl, wheelbl, rotbl);
-  SetState(br, wheelbr, rotbr);
+  SetState(flOptimized, wheelfl, rotfl);
+  SetState(frOptimized, wheelfr, rotfr);
+  SetState(blOptimized, wheelbl, rotbl);
+  SetState(brOptimized, wheelbr, rotbr);
 
 }
 
