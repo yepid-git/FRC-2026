@@ -1,12 +1,8 @@
-// Copyright (c) FIRST and other WPILib contributors.
-// Open Source Software; you can modify and/or share it under the terms of
-// the WPILib BSD license file in the root directory of this project.
+
 
 #define PI 3.14159265358979323846
 
-#include "Robot.h"
 #include "LimelightHelpers.h"
-
 #include <frc/TimedRobot.h>
 #include <frc/filter/SlewRateLimiter.h>
 #include <frc/XboxController.h>
@@ -89,8 +85,8 @@ class Robot : public frc::TimedRobot {
   //intake CAN ID
   rev::spark::SparkMax intake{30, rev::spark::SparkLowLevel::MotorType::kBrushless};
 
-  //degrees in int, later converted to degree_t
-  int d = 180;
+  //degrees in double, later converted to degree_t
+  double d = 180;
   //speedfactor
   double speedfactor = 2000;
   //timer object
@@ -142,7 +138,7 @@ void RobotInit(){
 
   driveConfig.closedLoop
     .SetFeedbackSensor(rev::spark::FeedbackSensor::kPrimaryEncoder)
-    .Pid(0.0001, 0.000001, 0.00000001)
+    .Pid(0.1, 0.000001, 0.00000001)
     .IZone(4000);
 
   steerConfig
@@ -157,8 +153,9 @@ void RobotInit(){
 
   steerConfig.closedLoop
     .SetFeedbackSensor(rev::spark::FeedbackSensor::kPrimaryEncoder)
-    .Pid(0.0001, 0.000001, 0.00000001)
+    .Pid(0.5, 0.000001, 0.00000001)
     .PositionWrappingEnabled(true)
+    .PositionWrappingInputRange(-PI, PI)
     .IZone(4000);
 
 
@@ -262,14 +259,16 @@ void TeleopPeriodic() {
 }
 
 void SetState(frc::SwerveModuleState optState, rev::spark::SparkMax& driveSpark, rev::spark::SparkMax& steerSpark){
-  double angleThr{2*PI/360};
-  double deltaAngle = optState.angle.Radians().value() - steerSpark.GetEncoder().GetPosition();
-  if ((fabs(optState.speed.value()) < 0.001) && (fabs(deltaAngle) < angleThr)) {
-    driveSpark.Set(0);
-  } else {
-    driveSpark.GetClosedLoopController().SetReference(optState.speed.value(), rev::spark::SparkBase::ControlType::kVelocity);
-    steerSpark.GetClosedLoopController().SetReference(optState.angle.Radians().value(), rev::spark::SparkBase::ControlType::kPosition);
-  }
+
+  driveSpark.GetClosedLoopController().SetReference(
+    optState.speed.value(), 
+    rev::spark::SparkBase::ControlType::kVelocity
+  );
+
+  steerSpark.GetClosedLoopController().SetReference(
+    optState.angle.Radians().value(), 
+    rev::spark::SparkBase::ControlType::kPosition
+  );
 }
 
 void Drive(double x, double y, double rotate){
@@ -280,8 +279,15 @@ void Drive(double x, double y, double rotate){
   if (std::abs(y) < 0.1) y = 0;
   if (std::abs(rotate) < 0.1) rotate = 0;
 
-  units::degree_t degr{d};
-  frc::Rotation2d rot2d{degr}; //rot2d reflects the AHRS gyroscope orientation
+  //if the controllers have no input, just sets all the motors speeds to 0
+  if (x == 0 && y == 0 && rotate == 0) {
+    wheelfl.Set(0); wheelfr.Set(0); wheelbl.Set(0); wheelbr.Set(0);
+    rotfl.Set(0);   rotfr.Set(0);   rotbl.Set(0);   rotbr.Set(0);
+    return; 
+  }
+
+  //rot2d reflects the AHRS gyroscope orientation
+  frc::Rotation2d rot2d = frc::Rotation2d(units::degree_t{-ahrs->GetAngle()});
 
   frc::SmartDashboard::PutNumber("Drive:x", x);
   frc::SmartDashboard::PutNumber("Drive:y", y);
@@ -305,7 +311,13 @@ void Drive(double x, double y, double rotate){
   );
 
   //converts the speeds to swerve module states
-  auto [fl, fr, bl, br] = kinematics.ToSwerveModuleStates(speeds);
+
+  auto modules = kinematics.ToSwerveModuleStates(speeds);
+
+  //safety to prevent wheels from spinning too fast
+  kinematics.DesaturateWheelSpeeds(&modules, 4_mps);
+
+  auto [fl, fr, bl, br] = modules;
 
 
   //experiment: getting wpilib to optimize angles instead (eliminating need for complex swerve math)
@@ -340,6 +352,7 @@ void DisabledInit() {}
 void DisabledPeriodic() {}
 
 void TestInit() {}
+
 
 void TestPeriodic() {}
 
