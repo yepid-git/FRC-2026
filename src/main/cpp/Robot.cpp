@@ -106,6 +106,9 @@ class Robot : public frc::TimedRobot {
         m_backRightLocation};
   frc::XboxController controller{0};
   //frc::XboxController controller2{1}; maybe use later
+
+  //Slew rate limiter is REALLY high, 18 m/s^2 is the limit on acceleration (basically no limit)
+  //change if robot shoots forwards too fast!
   frc::SlewRateLimiter<units::meters_per_second> limitx{9_mps / .5_s};
   frc::SlewRateLimiter<units::meters_per_second> limity{9_mps / .5_s};
 
