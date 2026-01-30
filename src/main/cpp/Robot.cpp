@@ -330,8 +330,8 @@ void Drive(double x, double y, double rotate){
   //this is where joystick percentages become velocity!
   //max speeds become 1 x factor units / sec
   //max x & y speed become 4m/s
-  //max rotation speed is 2 rad/s
-  units::radians_per_second_t rad{rotate*2};
+  //max rotation speed is 3 rad/s
+  units::radians_per_second_t rad{rotate*3};
   units::meters_per_second_t speedy{y*4};
   units::meters_per_second_t speedx{x*4};
 
