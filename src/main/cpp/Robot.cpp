@@ -330,13 +330,16 @@ void Drive(double x, double y, double rotate){
   //this is where joystick percentages become velocity!
   //max speeds become 1 x factor units / sec
   //max x & y speed become 4m/s
-  //max rotation speed is 1 rad/s
-  units::radians_per_second_t rad{rotate*1};
+  //max rotation speed is 2 rad/s
+  units::radians_per_second_t rad{rotate*2};
   units::meters_per_second_t speedy{y*4};
   units::meters_per_second_t speedx{x*4};
 
-  //uses the slewrate limiter to determine necessary chassis speeds
+  /* ChassisSpeeds::FromFieldRelativeSpeeds takes in desired x, desired y, and angular velocities
+  as well as the robots current angle
+  */
   frc::ChassisSpeeds speeds = frc::ChassisSpeeds::FromFieldRelativeSpeeds(
+    //uses the slewrate limiter to determine necessary chassis speeds
     limitx.Calculate(speedx),
     limity.Calculate(speedy),
     rad * 1.2,  // sensitivity multiplier?? increase if rotation is sluggish, decrease if jittery
