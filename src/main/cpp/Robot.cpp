@@ -65,6 +65,7 @@ class Robot : public frc::TimedRobot {
   // Setting up steering motors using even CAN bus ID's
   // The constructor parameter is the "analog input channel" to use, corresponding to
   // the RoboRIO AnalogIn pins.
+  // These analog encoders, when .Get() is used, provide the angle in ROTATIONS (0 to 1.0) 
   rev::spark::SparkMax rotfl{2, rev::spark::SparkLowLevel::MotorType::kBrushless};
   frc::AnalogEncoder encfl{3};
   rev::spark::SparkMax rotfr{6, rev::spark::SparkLowLevel::MotorType::kBrushless};
@@ -132,12 +133,16 @@ void RobotInit(){
   //l1ratio = 8.14;
   double gearratio = 6.12;
 
+
+  //The conversion factor here turns rotations, to meters. In one rotation, the wheel travels
+  //diameter * PI / gear ratio
   driveConfig.encoder
     .PositionConversionFactor((PI * 0.1016) / gearratio)
     .VelocityConversionFactor(((PI * 0.1016) / gearratio) / 60.0);
 
   driveConfig.closedLoop
     .SetFeedbackSensor(rev::spark::FeedbackSensor::kPrimaryEncoder)
+    //pid might be too small?
     .Pid(0.1, 0.000001, 0.00000001)
     .IZone(4000);
 
@@ -146,7 +151,9 @@ void RobotInit(){
     .SetIdleMode(rev::spark::SparkBaseConfig::IdleMode::kBrake);
 
 
-  //steer ratio is 150/7:1
+  //steer gear ratio is 150/7:1
+  //one rotation is 2pi radians
+  //divide that by the steering gear ratio gets the amount of radians traveled per rotation
   steerConfig.encoder
     .PositionConversionFactor((2.0 * PI) / (150.0 / 7.0))
     .VelocityConversionFactor(((2.0 * PI) / (150.0 / 7.0)) / 60.0);
@@ -183,6 +190,12 @@ void RobotInit(){
   wheelbl.GetEncoder().SetPosition(0);
   wheelbr.GetEncoder().SetPosition(0);
 
+
+  //rotation motors need seeding to know what angle they start at
+  //similar to the absolute encoders, the analog encoders also return the wheel's angle in ROTATIONS
+  //we want RADIANS!!!
+  //2pi rad per rotation
+  //note to self: apparently we need offsets, fix later.
   rotfl.GetEncoder().SetPosition(encfl.Get() * 2.0 * PI);
   rotfr.GetEncoder().SetPosition(encfr.Get()* 2.0 * PI);
   rotbl.GetEncoder().SetPosition(encbl.Get() * 2.0 * PI);
@@ -224,6 +237,8 @@ void RobotInit(){
 
 void RobotPeriodic() {
 
+  //every 20ms, robot receives new data from limelight
+  //currently not important for purposes of drive testing, but it will be in auto
   foundtarget = LimelightHelpers::getTV("");
   tx = LimelightHelpers::getTX("");
   ty = LimelightHelpers::getTY("");
@@ -252,9 +267,12 @@ void TeleopInit() {
   speedfactor = 2000;
 }
 
+
+//every 20ms during teleop robot reads the joystick's percentages
 void TeleopPeriodic() {
   //x, y, turn
   //for now, just calling drive on it's own
+  //joysticks are inverted because wpi NWU axes co-ordinate system is weird, search it up if interested
   Drive(-controller.GetLeftY(), -controller.GetLeftX(), -controller.GetRightX());
 }
 
@@ -271,9 +289,16 @@ void SetState(frc::SwerveModuleState optState, rev::spark::SparkMax& driveSpark,
   );
 }
 
+
+//drive grabs the joystick PERCENTAGES, and converts them into VELOCITY
 void Drive(double x, double y, double rotate){
   //grabs robot's angle relative to driver station, in other words it's current field orientation
   d = 360 - ahrs->GetAngle();
+
+  /* 
+  since joysticks don't truly return to "zero", the deadbands (if statements) are there to ignore
+  input IF the joystick values are negligible
+  */
 
   if (std::abs(x) < 0.1) x = 0;
   if (std::abs(y) < 0.1) y = 0;
@@ -289,6 +314,8 @@ void Drive(double x, double y, double rotate){
   //rot2d reflects the AHRS gyroscope orientation
   frc::Rotation2d rot2d = frc::Rotation2d(units::degree_t{-ahrs->GetAngle()});
 
+
+  //bunch of debugging utilities
   frc::SmartDashboard::PutNumber("Drive:x", x);
   frc::SmartDashboard::PutNumber("Drive:y", y);
   frc::SmartDashboard::PutNumber("Drive:rotate", rotate);
@@ -299,9 +326,15 @@ void Drive(double x, double y, double rotate){
   frc::SmartDashboard::PutNumber("encbr.Get", encbr.Get());
 
 
-  units::radians_per_second_t rad{rotate*8};
+
+  //this is where joystick percentages become velocity!
+  //max speeds become 1 x factor units / sec
+  //max x & y speed become 4m/s
+  //max rotation speed is 1 rad/s
+  units::radians_per_second_t rad{rotate*1};
   units::meters_per_second_t speedy{y*4};
   units::meters_per_second_t speedx{x*4};
+  
   //uses the slewrate limiter to determine necessary chassis speeds
   frc::ChassisSpeeds speeds = frc::ChassisSpeeds::FromFieldRelativeSpeeds(
     limitx.Calculate(speedx),
