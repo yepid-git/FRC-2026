@@ -279,13 +279,23 @@ void TeleopPeriodic() {
   Drive(-controller.GetLeftY(), -controller.GetLeftX(), -controller.GetRightX());
 }
 
+//SetState takes in optimal state, and both drive and steer spark motor controllers
 void SetState(frc::SwerveModuleState optState, rev::spark::SparkMax& driveSpark, rev::spark::SparkMax& steerSpark){
 
+  /* The driver sparks PID controller gets the speed value from optState, and then does 
+  its own internal calculations to achieve that value.
+  Basically the spark looks at it's own encoder to get it's current velocity,
+  then does it's own internal math to calculate the voltage necessary to reach
+  and maintain the target velocity. 
+  If the motor spins too fast, it decreases voltage.
+  If the motor spins too slow, it increases voltage.
+  */
   driveSpark.GetClosedLoopController().SetReference(
     optState.speed.value(), 
     rev::spark::SparkBase::ControlType::kVelocity
   );
 
+  //same with steer sparks PID controller
   steerSpark.GetClosedLoopController().SetReference(
     optState.angle.Radians().value(), 
     rev::spark::SparkBase::ControlType::kPosition
@@ -356,6 +366,7 @@ void Drive(double x, double y, double rotate){
   //safety to prevent wheels from spinning too fast
   kinematics.DesaturateWheelSpeeds(&modules, 4_mps);
 
+  //just stores the swerve module states in each motor
   auto [fl, fr, bl, br] = modules;
 
 
@@ -366,6 +377,7 @@ void Drive(double x, double y, double rotate){
   frc::Rotation2d brAngle{units::radian_t{rotbr.GetEncoder().GetPosition()}};
 
 
+  //SwerveModuleState::Optimize takes in the state, and the ideal angle, then optimizes the state to include that angle
   auto flOptimized = frc::SwerveModuleState::Optimize(fl, flAngle);
   auto frOptimized = frc::SwerveModuleState::Optimize(fr, frAngle);
   auto blOptimized = frc::SwerveModuleState::Optimize(bl, blAngle);
@@ -377,6 +389,9 @@ void Drive(double x, double y, double rotate){
   bl.Optimize(blAngle);
   br.Optimize(brAngle);
   */
+
+  //set state takes in the perfectly optimized state, the movement controller, and steering controller
+  //optimized state contains two values, the speed and angle
 
   SetState(flOptimized, wheelfl, rotfl);
   SetState(frOptimized, wheelfr, rotfr);
