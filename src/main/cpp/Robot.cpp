@@ -143,7 +143,7 @@ void RobotInit(){
   driveConfig.closedLoop
     .SetFeedbackSensor(rev::spark::FeedbackSensor::kPrimaryEncoder)
     //pid might be too small?
-    .Pid(0.6769420, 0.000001, 0.00000001)
+    .Pid(0.1, 0.000001, 0.00000001)
     .IZone(4000);
 
   steerConfig
