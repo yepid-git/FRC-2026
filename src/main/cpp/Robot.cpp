@@ -143,7 +143,7 @@ void RobotInit(){
   driveConfig.closedLoop
     .SetFeedbackSensor(rev::spark::FeedbackSensor::kPrimaryEncoder)
     //pid might be too small?
-    .Pid(0.1, 0.000001, 0.00000001)
+    .Pid(0.6769420, 0.000001, 0.00000001)
     .IZone(4000);
 
   steerConfig
@@ -160,7 +160,7 @@ void RobotInit(){
 
   steerConfig.closedLoop
     .SetFeedbackSensor(rev::spark::FeedbackSensor::kPrimaryEncoder)
-    .Pid(0.5, 0.000001, 0.00000001)
+    .Pid(0.6769420, 0.000001, 0.00000001)
     .PositionWrappingEnabled(true)
     .PositionWrappingInputRange(-PI, PI)
     .IZone(4000);
@@ -334,7 +334,7 @@ void Drive(double x, double y, double rotate){
   units::radians_per_second_t rad{rotate*1};
   units::meters_per_second_t speedy{y*4};
   units::meters_per_second_t speedx{x*4};
-  
+
   //uses the slewrate limiter to determine necessary chassis speeds
   frc::ChassisSpeeds speeds = frc::ChassisSpeeds::FromFieldRelativeSpeeds(
     limitx.Calculate(speedx),
