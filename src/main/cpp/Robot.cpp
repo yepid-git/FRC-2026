@@ -118,9 +118,11 @@ class Robot : public frc::TimedRobot {
 
 
 void RobotInit(){
-  //limelight configs
+  //limelight configs (disabled for now)
+  /*
   LimelightHelpers::setPipelineIndex("", 0);
   LimelightHelpers::setLEDMode_ForceOn("");
+  */
 
   //lots of configs
   //Note: TUNE PID's Later (maybe?)
@@ -199,14 +201,20 @@ void RobotInit(){
   //we want RADIANS!!!
   //2pi rad per rotation
   //note to self: apparently we need offsets, fix later.
-  rotfl.GetEncoder().SetPosition(encfl.Get() * 2.0 * PI);
-  rotfr.GetEncoder().SetPosition(encfr.Get()* 2.0 * PI);
-  rotbl.GetEncoder().SetPosition(encbl.Get() * 2.0 * PI);
-  rotbr.GetEncoder().SetPosition(encbr.Get()* 2.0 * PI);
+
+  double floff;
+  double froff;
+  double bloff;
+  double broff;
+  
+  rotfl.GetEncoder().SetPosition((encfl.Get() + floff) * 2.0 * PI);
+  rotfr.GetEncoder().SetPosition((encfr.Get() + froff) * 2.0 * PI);
+  rotbl.GetEncoder().SetPosition((encbl.Get() + bloff) * 2.0 * PI);
+  rotbr.GetEncoder().SetPosition((encbr.Get() + broff) * 2.0 * PI);
   
 
   //idk what this is for tbh
-  //configs something
+  //unused for now
   otherConfig
     .Inverted(true)
     .SetIdleMode(rev::spark::SparkBaseConfig::IdleMode::kBrake);
@@ -279,7 +287,7 @@ void TeleopPeriodic() {
   Drive(-controller.GetLeftY(), -controller.GetLeftX(), -controller.GetRightX());
 }
 
-//SetState takes in optimal state, and both drive and steer spark motor controllers
+//SetState takes in optimal state, and both drive and steer spark motor controller objects
 void SetState(frc::SwerveModuleState optState, rev::spark::SparkMax& driveSpark, rev::spark::SparkMax& steerSpark){
 
   /* The driver sparks PID controller gets the speed value from optState, and then does 
@@ -400,20 +408,24 @@ void Drive(double x, double y, double rotate){
 
 }
 
-/*
+
 void DisabledInit() {}
 
 void DisabledPeriodic() {}
 
 void TestInit() {}
 
-
-void TestPeriodic() {}
+void TestPeriodic() {
+  frc::SmartDashboard::PutNumber("encfl.Get", encfl.Get());
+  frc::SmartDashboard::PutNumber("encfr.Get", encfr.Get());
+  frc::SmartDashboard::PutNumber("encbl.Get", encbl.Get());
+  frc::SmartDashboard::PutNumber("encbr.Get", encbr.Get());
+}
 
 void SimulationInit() {}
 
 void SimulationPeriodic() {}
-*/
+
 
 };
 
