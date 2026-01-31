@@ -1,5 +1,3 @@
-
-
 #define PI 3.14159265358979323846
 
 #include "LimelightHelpers.h"
@@ -136,7 +134,7 @@ void RobotInit(){
   //l3ratio = 6.12;
   //l2ratio = 6.75;
   //l1ratio = 8.14;
-  double gearratio = 6.12;
+  double gearratio = 8.14;
 
 
   //The conversion factor here turns rotations, to meters. In one rotation, the wheel travels
