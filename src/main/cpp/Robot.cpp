@@ -28,6 +28,8 @@
 #include <cmath>
 #include <networktables/NetworkTable.h>
 
+
+
 class Robot : public frc::TimedRobot {
 
   //limelight placeholder variables
