@@ -27,7 +27,7 @@
 #include <frc/smartdashboard/SmartDashboard.h>
 #include <cmath>
 #include <networktables/NetworkTable.h>
-
+#include <frc/kinematics/SwerveDriveOdometry.h>
 
 
 class Robot : public frc::TimedRobot {
@@ -107,6 +107,38 @@ class Robot : public frc::TimedRobot {
   frc::XboxController controller{0};
   //frc::XboxController controller2{1}; maybe use later
 
+
+  //odometry object
+  //tracks robot position on field by using the motor encoders
+  frc::SwerveDriveOdometry<4> odometry{
+    kinematics,
+    ahrs->GetRotation2d(),
+    {
+      frc::SwerveModulePosition{
+          units::meter_t{wheelfl.GetEncoder().GetPosition()}, 
+          frc::Rotation2d{units::radian_t{rotfl.GetEncoder().GetPosition()}}
+      },
+
+      frc::SwerveModulePosition{
+          units::meter_t{wheelfr.GetEncoder().GetPosition()}, 
+          frc::Rotation2d{units::radian_t{rotfr.GetEncoder().GetPosition()}}
+      },
+
+      frc::SwerveModulePosition{
+          units::meter_t{wheelbl.GetEncoder().GetPosition()}, 
+          frc::Rotation2d{units::radian_t{rotbl.GetEncoder().GetPosition()}}
+      },
+
+      frc::SwerveModulePosition{
+          units::meter_t{wheelbr.GetEncoder().GetPosition()}, 
+          frc::Rotation2d{units::radian_t{rotbr.GetEncoder().GetPosition()}}
+      },
+    },
+    frc::Pose2d{0_m, 0_m, 0_rad}
+  };
+
+  frc::Pose2d pose = odometry.GetPose();
+
   //Slew rate limiter is REALLY high, 18 m/s^2 is the limit on acceleration (basically no limit)
   //change if robot shoots forwards too fast!
   frc::SlewRateLimiter<units::meters_per_second> limitx{9_mps / .5_s};
@@ -166,7 +198,7 @@ void RobotInit(){
   steerConfig.closedLoop
     .SetFeedbackSensor(rev::spark::FeedbackSensor::kPrimaryEncoder)
     .Pid(0.6769420, 0.000001, 0.00000001)
-    .PositionWrappingEnabled(true)
+    .PositionWrappingEnabled(false)
     .PositionWrappingInputRange(-PI, PI)
     .IZone(4000);
 
@@ -202,10 +234,10 @@ void RobotInit(){
   //2pi rad per rotation
   //note to self: apparently we need offsets, fix later.
 
-  double floff;
-  double froff;
-  double bloff;
-  double broff;
+  double floff = 0.0;
+  double froff = 0.0;
+  double bloff = 0.0;
+  double broff = 0.0;
   
   rotfl.GetEncoder().SetPosition((encfl.Get() + floff) * 2.0 * PI);
   rotfr.GetEncoder().SetPosition((encfr.Get() + froff) * 2.0 * PI);
@@ -242,6 +274,35 @@ void RobotInit(){
   ahrs->Reset();
   ahrs->ResetDisplacement();
   ahrs->SetAngleAdjustment(0);
+
+
+  //reset odometry
+  odometry.ResetPosition(ahrs->GetRotation2d(),
+        {
+      frc::SwerveModulePosition{
+          units::meter_t{wheelfl.GetEncoder().GetPosition()}, 
+          frc::Rotation2d{units::radian_t{rotfl.GetEncoder().GetPosition()}}
+      },
+
+      frc::SwerveModulePosition{
+          units::meter_t{wheelfr.GetEncoder().GetPosition()}, 
+          frc::Rotation2d{units::radian_t{rotfr.GetEncoder().GetPosition()}}
+      },
+
+      frc::SwerveModulePosition{
+          units::meter_t{wheelbl.GetEncoder().GetPosition()}, 
+          frc::Rotation2d{units::radian_t{rotbl.GetEncoder().GetPosition()}}
+      },
+
+      frc::SwerveModulePosition{
+          units::meter_t{wheelbr.GetEncoder().GetPosition()}, 
+          frc::Rotation2d{units::radian_t{rotbr.GetEncoder().GetPosition()}}
+      },
+    },
+    frc::Pose2d{0_m, 0_m, 0_rad}
+  );
+
+
 }
 
 
@@ -260,7 +321,13 @@ void RobotPeriodic() {
   frc::SmartDashboard::PutNumber("TY", ty);
   frc::SmartDashboard::PutNumber("TA", ta);
 
+  frc::Rotation2d gyroAngle = ahrs->GetRotation2d();
+
+  UpdatePose();
+
 }
+
+
 
 
 void AutonomousInit() {
@@ -406,6 +473,35 @@ void Drive(double x, double y, double rotate){
   SetState(blOptimized, wheelbl, rotbl);
   SetState(brOptimized, wheelbr, rotbr);
 
+}
+
+
+//helper function to update pose
+void UpdatePose(){
+  pose = odometry.Update(
+    ahrs->GetRotation2d(),
+    {
+      frc::SwerveModulePosition{
+          units::meter_t{wheelfl.GetEncoder().GetPosition()}, 
+          frc::Rotation2d{units::radian_t{rotfl.GetEncoder().GetPosition()}}
+      },
+
+      frc::SwerveModulePosition{
+          units::meter_t{wheelfr.GetEncoder().GetPosition()}, 
+          frc::Rotation2d{units::radian_t{rotfr.GetEncoder().GetPosition()}}
+      },
+
+      frc::SwerveModulePosition{
+          units::meter_t{wheelbl.GetEncoder().GetPosition()}, 
+          frc::Rotation2d{units::radian_t{rotbl.GetEncoder().GetPosition()}}
+      },
+
+      frc::SwerveModulePosition{
+          units::meter_t{wheelbr.GetEncoder().GetPosition()}, 
+          frc::Rotation2d{units::radian_t{rotbr.GetEncoder().GetPosition()}}
+      },
+    }
+  );
 }
 
 
