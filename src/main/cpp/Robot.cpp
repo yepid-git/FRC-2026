@@ -163,10 +163,12 @@ void RobotInit(){
     .PositionConversionFactor((2.0 * PI) / (150.0 / 7.0))
     .VelocityConversionFactor(((2.0 * PI) / (150.0 / 7.0)) / 60.0);
 
+
+  //for now, disable position wrapping
   steerConfig.closedLoop
     .SetFeedbackSensor(rev::spark::FeedbackSensor::kPrimaryEncoder)
     .Pid(0.6769420, 0.000001, 0.00000001)
-    .PositionWrappingEnabled(true)
+    .PositionWrappingEnabled(false)
     .PositionWrappingInputRange(-PI, PI)
     .IZone(4000);
 
@@ -202,10 +204,10 @@ void RobotInit(){
   //2pi rad per rotation
   //note to self: apparently we need offsets, fix later.
 
-  double floff;
-  double froff;
-  double bloff;
-  double broff;
+  double floff = 0.0;
+  double froff = 0.0;
+  double bloff = 0.0;
+  double broff = 0.0;
   
   rotfl.GetEncoder().SetPosition((encfl.Get() + floff) * 2.0 * PI);
   rotfr.GetEncoder().SetPosition((encfr.Get() + froff) * 2.0 * PI);
