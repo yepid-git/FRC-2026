@@ -1,7 +1,7 @@
   //important: please set offsets (lines 210-213), instructions provided.
 #define PI 3.14159265358979323846
 
-#include "LimelightHelpers.h"
+//#include "LimelightHelpers.h"
 #include <frc/TimedRobot.h>
 #include <frc/filter/SlewRateLimiter.h>
 #include <frc/XboxController.h>
@@ -255,6 +255,7 @@ void RobotPeriodic() {
 
   //every 20ms, robot receives new data from limelight
   //currently not important for purposes of drive testing, but it will be in auto
+  /*
   foundtarget = LimelightHelpers::getTV("");
   tx = LimelightHelpers::getTX("");
   ty = LimelightHelpers::getTY("");
@@ -264,6 +265,7 @@ void RobotPeriodic() {
   frc::SmartDashboard::PutNumber("TX", tx);
   frc::SmartDashboard::PutNumber("TY", ty);
   frc::SmartDashboard::PutNumber("TA", ta);
+  */
 
 }
 
