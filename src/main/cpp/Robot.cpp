@@ -204,6 +204,8 @@ void RobotInit(){
   //2pi rad per rotation
   //note to self: apparently we need offsets, fix later.
 
+  //when finding offset values, if offset is less than or equal to 0.5, keep it positive as is
+  //if offset is negative, set it equal to -(1-offset) 
   double floff = 0.0;
   double froff = 0.0;
   double bloff = 0.0;
