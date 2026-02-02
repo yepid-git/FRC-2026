@@ -392,7 +392,7 @@ void Drive(double x, double y, double rotate){
   frc::Rotation2d brAngle{units::radian_t{rotbr.GetEncoder().GetPosition()}};
 
 
-  //SwerveModuleState::Optimize takes in the state, and the ideal angle, then optimizes the state to include that angle
+  //SwerveModuleState::Optimize takes in the state, and the current angle, then optimizes the state to include that angle
   auto flOptimized = frc::SwerveModuleState::Optimize(fl, flAngle);
   auto frOptimized = frc::SwerveModuleState::Optimize(fr, frAngle);
   auto blOptimized = frc::SwerveModuleState::Optimize(bl, blAngle);
