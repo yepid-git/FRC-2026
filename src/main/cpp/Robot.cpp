@@ -1,6 +1,6 @@
 #define PI 3.14159265358979323846
 
-#include "LimelightHelpers.h"
+//#include "LimelightHelpers.h"
 #include <frc/TimedRobot.h>
 #include <frc/filter/SlewRateLimiter.h>
 #include <frc/XboxController.h>
@@ -33,10 +33,12 @@
 class Robot : public frc::TimedRobot {
 
   //limelight placeholder variables
+  /*
   bool foundtarget = false;
   double tx;
   double ty;
   double ta;
+  */
 
   //set location of each wheel relative to center (using WPILib's NWU axes coordinate system)
   frc::Translation2d m_frontLeftLocation{0.213_m, 0.352_m};
@@ -212,7 +214,8 @@ void RobotInit(){
   //similar to the absolute encoders, the analog encoders also return the wheel's angle in ROTATIONS
   //we want RADIANS!!!
   //2pi rad per rotation
-  //note to self: apparently we need offsets, fix later.
+  //if offset less than 0.5 offset = offset
+  //if offset greater than 0.5, offset = -(1-offset)
 
   double floff = 0.0;
   double froff = 0.0;
@@ -270,6 +273,7 @@ void RobotPeriodic() {
 
   //every 20ms, robot receives new data from limelight
   //currently not important for purposes of drive testing, but it will be in auto
+  /*
   foundtarget = LimelightHelpers::getTV("");
   tx = LimelightHelpers::getTX("");
   ty = LimelightHelpers::getTY("");
@@ -279,6 +283,8 @@ void RobotPeriodic() {
   frc::SmartDashboard::PutNumber("TX", tx);
   frc::SmartDashboard::PutNumber("TY", ty);
   frc::SmartDashboard::PutNumber("TA", ta);
+
+  */
 
   frc::Rotation2d gyroAngle = ahrs->GetRotation2d();
 
@@ -451,10 +457,15 @@ void DisabledPeriodic() {}
 void TestInit() {}
 
 void TestPeriodic() {
-  frc::SmartDashboard::PutNumber("encfl.Get", encfl.Get());
-  frc::SmartDashboard::PutNumber("encfr.Get", encfr.Get());
-  frc::SmartDashboard::PutNumber("encbl.Get", encbl.Get());
-  frc::SmartDashboard::PutNumber("encbr.Get", encbr.Get());
+  frc::SmartDashboard::PutNumber("Analog: FL", encfl.Get());
+  frc::SmartDashboard::PutNumber("Analog: FR", encfr.Get());
+  frc::SmartDashboard::PutNumber("Analog: BL", encbl.Get());
+  frc::SmartDashboard::PutNumber("Analog: BR", encbr.Get());
+
+  frc::SmartDashboard::PutNumber("Gyro: Disp X", ahrs->GetDisplacementX());
+  frc::SmartDashboard::PutNumber("Gyro: Disp Y", ahrs->GetDisplacementY());
+  frc::SmartDashboard::PutNumber("Gyro: Disp Z", ahrs->GetDisplacementZ());
+  frc::SmartDashboard::PutNumber("Gyro: Angle", ahrs->GetAngle());
 }
 
 void SimulationInit() {}
