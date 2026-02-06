@@ -81,12 +81,13 @@ class Robot : public frc::TimedRobot {
 
   //shooter CAN ID's
   //Note to self: MIGHT need encoder for rotsh (plan is for continuous alignment with goal)
+  /*
   rev::spark::SparkMax rotsh{21, rev::spark::SparkLowLevel::MotorType::kBrushless};
   rev::spark::SparkMax firesh{20, rev::spark::SparkLowLevel::MotorType::kBrushless};
 
   //intake CAN ID
   rev::spark::SparkMax intake{30, rev::spark::SparkLowLevel::MotorType::kBrushless};
-
+  */
   //degrees in double, later converted to degree_t
   double d = 180;
   //speedfactor
@@ -110,8 +111,8 @@ class Robot : public frc::TimedRobot {
 
   //Slew rate limiter is REALLY high, 18 m/s^2 is the limit on acceleration (basically no limit)
   //change if robot shoots forwards too fast!
-  frc::SlewRateLimiter<units::meters_per_second> limitx{9_mps / .5_s};
-  frc::SlewRateLimiter<units::meters_per_second> limity{9_mps / .5_s};
+  frc::SlewRateLimiter<units::meters_per_second> limitx{3_mps / .5_s};
+  frc::SlewRateLimiter<units::meters_per_second> limity{3_mps / .5_s};
 
   //Controller Mode Variables
   bool m_manual_mode = true;
@@ -207,10 +208,10 @@ void RobotInit(){
 
   //when finding offset values, if offset is less than or equal to 0.5, keep it positive as is
   //if offset is negative, set it equal to -(1-offset) 
-  double floff = 0.0;
-  double froff = 0.0;
-  double bloff = 0.0;
-  double broff = 0.0;
+  double floff = -(1-0.503941);
+  double froff = -(1-0.856725);
+  double bloff = 0.110882;
+  double broff = 0.496549;
   
   rotfl.GetEncoder().SetPosition((encfl.Get() + floff) * 2.0 * PI);
   rotfr.GetEncoder().SetPosition((encfr.Get() + froff) * 2.0 * PI);
@@ -320,7 +321,7 @@ void SetState(frc::SwerveModuleState optState, rev::spark::SparkMax& driveSpark,
 
 //drive grabs the joystick PERCENTAGES, and converts them into VELOCITY
 void Drive(double x, double y, double rotate){
-  //grabs robot's angle relative to driver station, in other words it's current field orientation
+  //grabs robot's angle relative to driverd station, in other words it's current field orientation
   d = 360 - ahrs->GetAngle();
 
   /* 
@@ -328,9 +329,9 @@ void Drive(double x, double y, double rotate){
   input IF the joystick values are negligible
   */
 
-  if (std::abs(x) < 0.1) x = 0;
-  if (std::abs(y) < 0.1) y = 0;
-  if (std::abs(rotate) < 0.1) rotate = 0;
+  if (std::abs(x) < 0.3) x = 0;
+  if (std::abs(y) < 0.3) y = 0;
+  if (std::abs(rotate) < 0.3) rotate = 0;
 
   //if the controllers have no input, just sets all the motors speeds to 0
   if (x == 0 && y == 0 && rotate == 0) {
