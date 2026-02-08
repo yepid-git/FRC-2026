@@ -208,10 +208,10 @@ void RobotInit(){
 
   //when finding offset values, if offset is less than or equal to 0.5, keep it positive as is
   //if offset is negative, set it equal to -(1-offset) 
-  double floff = -(1-0.503941);
-  double froff = -(1-0.856725);
-  double bloff = 0.110882;
-  double broff = 0.496549;
+  double floff = 0.02;
+  double froff = -0.36;
+  double bloff = -0.1;
+  double broff = -0.49;
   
   rotfl.GetEncoder().SetPosition((encfl.Get() + floff) * 2.0 * PI);
   rotfr.GetEncoder().SetPosition((encfr.Get() + froff) * 2.0 * PI);
