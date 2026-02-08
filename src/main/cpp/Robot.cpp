@@ -217,11 +217,12 @@ void RobotInit(){
   //if offset less than 0.5 offset = offset
   //if offset greater than 0.5, offset = -(1-offset)
 
-  double floff = 0.0;
-  double froff = 0.0;
-  double bloff = 0.0;
-  double broff = 0.0;
-  
+
+  double floff = 0.02;
+  double froff = -0.36;
+  double bloff = -0.1;
+  double broff = -0.49;
+
   rotfl.GetEncoder().SetPosition((encfl.Get() + floff) * 2.0 * PI);
   rotfr.GetEncoder().SetPosition((encfr.Get() + froff) * 2.0 * PI);
   rotbl.GetEncoder().SetPosition((encbl.Get() + bloff) * 2.0 * PI);
@@ -290,6 +291,19 @@ void RobotPeriodic() {
 
   UpdatePose();
 
+  frc::SmartDashboard::PutNumber("PoseX", double (odometry.GetPose().X()));
+  frc::SmartDashboard::PutNumber("PoseY", double (odometry.GetPose().Y()));
+
+
+  frc::SmartDashboard::PutNumber("Analog: FL", encfl.Get());
+  frc::SmartDashboard::PutNumber("Analog: FR", encfr.Get());
+  frc::SmartDashboard::PutNumber("Analog: BL", encbl.Get());
+  frc::SmartDashboard::PutNumber("Analog: BR", encbr.Get());
+
+  frc::SmartDashboard::PutNumber("Gyro: Disp X", ahrs->GetDisplacementX());
+  frc::SmartDashboard::PutNumber("Gyro: Disp Y", ahrs->GetDisplacementY());
+  frc::SmartDashboard::PutNumber("Gyro: Disp Z", ahrs->GetDisplacementZ());
+  frc::SmartDashboard::PutNumber("Gyro: Angle", ahrs->GetAngle());
 }
 
 
@@ -369,6 +383,7 @@ void Drive(double x, double y, double rotate){
 
 
   //bunch of debugging utilities
+  /*
   frc::SmartDashboard::PutNumber("Drive:x", x);
   frc::SmartDashboard::PutNumber("Drive:y", y);
   frc::SmartDashboard::PutNumber("Drive:rotate", rotate);
@@ -377,7 +392,7 @@ void Drive(double x, double y, double rotate){
   frc::SmartDashboard::PutNumber("encfr.Get", encfr.Get());
   frc::SmartDashboard::PutNumber("encbl.Get", encbl.Get());
   frc::SmartDashboard::PutNumber("encbr.Get", encbr.Get());
-
+*/
 
 
   //this is where joystick percentages become velocity!
@@ -457,15 +472,7 @@ void DisabledPeriodic() {}
 void TestInit() {}
 
 void TestPeriodic() {
-  frc::SmartDashboard::PutNumber("Analog: FL", encfl.Get());
-  frc::SmartDashboard::PutNumber("Analog: FR", encfr.Get());
-  frc::SmartDashboard::PutNumber("Analog: BL", encbl.Get());
-  frc::SmartDashboard::PutNumber("Analog: BR", encbr.Get());
-
-  frc::SmartDashboard::PutNumber("Gyro: Disp X", ahrs->GetDisplacementX());
-  frc::SmartDashboard::PutNumber("Gyro: Disp Y", ahrs->GetDisplacementY());
-  frc::SmartDashboard::PutNumber("Gyro: Disp Z", ahrs->GetDisplacementZ());
-  frc::SmartDashboard::PutNumber("Gyro: Angle", ahrs->GetAngle());
+  
 }
 
 void SimulationInit() {}
