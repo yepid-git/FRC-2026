@@ -1,4 +1,3 @@
-  //important: please set offsets (lines 210-213), instructions provided.
 #define PI 3.14159265358979323846
 
 //#include "LimelightHelpers.h"
@@ -61,6 +60,7 @@ class Robot : public frc::TimedRobot {
   rev::spark::SparkBaseConfig steerConfig{};
   rev::spark::SparkBaseConfig otherConfig{};
   rev::spark::SparkBaseConfig hangConfig{};
+  rev::spark::SparkBaseConfig shooterConfig{};
 
   // for encoders, consider changing methods to GetAlternateEncoder with AlternateEncoder::Type::kHallEffect or something if you face an error
   // Setting up steering motors using even CAN bus ID's
@@ -81,13 +81,19 @@ class Robot : public frc::TimedRobot {
 
   //shooter CAN ID's
   //Note to self: MIGHT need encoder for rotsh (plan is for continuous alignment with goal)
-  /*
-  rev::spark::SparkMax rotsh{21, rev::spark::SparkLowLevel::MotorType::kBrushless};
-  rev::spark::SparkMax firesh{20, rev::spark::SparkLowLevel::MotorType::kBrushless};
+  
+  rev::spark::SparkMax firesh{20, rev::spark::SparkLowLevel::MotorType::kBrushless}; //Leader motor
+  rev::spark::SparkMax firesh2{21, rev::spark::SparkLowLevel::MotorType::kBrushless}; //Follower motor
+
+  rev::spark::SparkClosedLoopController pidfiresh = firesh.GetClosedLoopController();
+
+  //configs for shooters
+  rev::spark::SparkBaseConfig shooterLeaderConfig{};
+  rev::spark::SparkBaseConfig shooterFollowerConfig{};
 
   //intake CAN ID
-  rev::spark::SparkMax intake{30, rev::spark::SparkLowLevel::MotorType::kBrushless};
-  */
+  //rev::spark::SparkMax intake{30, rev::spark::SparkLowLevel::MotorType::kBrushless};
+  
   //degrees in double, later converted to degree_t
   double d = 180;
   //speedfactor
@@ -157,7 +163,6 @@ void RobotInit(){
     .Inverted(true)
     .SetIdleMode(rev::spark::SparkBaseConfig::IdleMode::kBrake);
 
-
   //steer gear ratio is 150/7:1
   //one rotation is 2pi radians
   //divide that by the steering gear ratio gets the amount of radians traveled per rotation
@@ -174,6 +179,21 @@ void RobotInit(){
     .PositionWrappingInputRange(-PI, PI)
     .IZone(4000);
 
+
+  //leader shooter config 
+  shooterLeaderConfig
+    .Inverted(false)
+    .SetIdleMode(rev::spark::SparkBaseConfig::IdleMode::kCoast);
+  
+  shooterLeaderConfig.closedLoop
+    .SetFeedbackSensor(rev::spark::FeedbackSensor::kPrimaryEncoder)
+    .Pid(0.0001, 0.0, 0.0)
+    //decrease if motor fires at full power
+    .VelocityFF(0.000147)
+    .IZone(0);
+
+  //sets the follower shooter to actually follow the leader
+  shooterFollowerConfig.Follow(firesh, true);
 
   //setting configurations for wheel and rotational motors
   wheelfl.Configure(driveConfig, rev::spark::SparkMax::ResetMode::kResetSafeParameters,
@@ -198,6 +218,14 @@ void RobotInit(){
   wheelfr.GetEncoder().SetPosition(0);
   wheelbl.GetEncoder().SetPosition(0);
   wheelbr.GetEncoder().SetPosition(0);
+
+
+  //shooter configs
+  firesh.Configure(shooterLeaderConfig, rev::spark::SparkMax::ResetMode::kResetSafeParameters,
+    rev::spark::SparkMax::PersistMode::kPersistParameters);
+    
+  firesh2.Configure(shooterFollowerConfig, rev::spark::SparkMax::ResetMode::kResetSafeParameters,
+    rev::spark::SparkMax::PersistMode::kPersistParameters);
 
 
   //rotation motors need seeding to know what angle they start at
@@ -245,6 +273,9 @@ void RobotInit(){
     .IZone(4000);
 
 
+
+    
+
   ahrs->Reset();
   ahrs->ResetDisplacement();
   ahrs->SetAngleAdjustment(0);
@@ -253,6 +284,7 @@ void RobotInit(){
 
 
 void RobotPeriodic() {
+
 
   //every 20ms, robot receives new data from limelight
   //currently not important for purposes of drive testing, but it will be in auto
@@ -293,6 +325,21 @@ void TeleopPeriodic() {
   //for now, just calling drive on it's own
   //joysticks are inverted because wpi NWU axes co-ordinate system is weird, search it up if interested
   Drive(-controller.GetLeftY(), -controller.GetLeftX(), -controller.GetRightX());
+
+
+  //shooter code
+  double targetrpm = 5867;
+
+  //if bumper is pressed, fire both motors at the target rpm, otherwise set their velocities to 0
+  if(controller.GetRightBumper()){
+    pidfiresh.SetReference(
+      targetrpm,
+      rev::spark::SparkBase::ControlType::kVelocity
+    );
+  } else {
+    firesh.StopMotor();
+  }
+
 }
 
 //SetState takes in optimal state, and both drive and steer spark motor controller objects
@@ -333,16 +380,10 @@ void Drive(double x, double y, double rotate){
   if (std::abs(y) < 0.3) y = 0;
   if (std::abs(rotate) < 0.3) rotate = 0;
 
-  //if the controllers have no input, just sets all the motors speeds to 0
-  if (x == 0 && y == 0 && rotate == 0) {
-    wheelfl.Set(0); wheelfr.Set(0); wheelbl.Set(0); wheelbr.Set(0);
-    rotfl.Set(0);   rotfr.Set(0);   rotbl.Set(0);   rotbr.Set(0);
-    return; 
-  }
 
+  
   //rot2d reflects the AHRS gyroscope orientation
   frc::Rotation2d rot2d = frc::Rotation2d(units::degree_t{-ahrs->GetAngle()});
-
 
   //bunch of debugging utilities
   frc::SmartDashboard::PutNumber("Drive:x", x);
@@ -353,7 +394,13 @@ void Drive(double x, double y, double rotate){
   frc::SmartDashboard::PutNumber("encfr.Get", encfr.Get());
   frc::SmartDashboard::PutNumber("encbl.Get", encbl.Get());
   frc::SmartDashboard::PutNumber("encbr.Get", encbr.Get());
-
+  
+  //if the controllers have no input, just sets all the motors speeds to 0
+  if (x == 0 && y == 0 && rotate == 0) {
+    wheelfl.Set(0); wheelfr.Set(0); wheelbl.Set(0); wheelbr.Set(0);
+    rotfl.Set(0);   rotfr.Set(0);   rotbl.Set(0);   rotbr.Set(0);
+    return; 
+  }
 
 
   //this is where joystick percentages become velocity!
@@ -361,8 +408,8 @@ void Drive(double x, double y, double rotate){
   //max x & y speed become 4m/s
   //max rotation speed is 3 rad/s
   units::radians_per_second_t rad{rotate*3};
-  units::meters_per_second_t speedy{y*4};
-  units::meters_per_second_t speedx{x*4};
+  units::meters_per_second_t speedy{y*8};
+  units::meters_per_second_t speedx{x*8};
 
   /* ChassisSpeeds::FromFieldRelativeSpeeds takes in desired x, desired y, and angular velocities
   as well as the robots current angle
@@ -380,7 +427,7 @@ void Drive(double x, double y, double rotate){
   auto modules = kinematics.ToSwerveModuleStates(speeds);
 
   //safety to prevent wheels from spinning too fast
-  kinematics.DesaturateWheelSpeeds(&modules, 4_mps);
+  kinematics.DesaturateWheelSpeeds(&modules, 8_mps);
 
   //just stores the swerve module states in each motor
   auto [fl, fr, bl, br] = modules;
@@ -424,10 +471,6 @@ void DisabledPeriodic() {}
 void TestInit() {}
 
 void TestPeriodic() {
-  frc::SmartDashboard::PutNumber("encfl.Get", encfl.Get());
-  frc::SmartDashboard::PutNumber("encfr.Get", encfr.Get());
-  frc::SmartDashboard::PutNumber("encbl.Get", encbl.Get());
-  frc::SmartDashboard::PutNumber("encbr.Get", encbr.Get());
 }
 
 void SimulationInit() {}
