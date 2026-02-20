@@ -27,6 +27,7 @@
 #include <frc/smartdashboard/SmartDashboard.h>
 #include <cmath>
 #include <networktables/NetworkTable.h>
+#include <rev/SparkFlex.h>
 
 
 
@@ -82,8 +83,8 @@ class Robot : public frc::TimedRobot {
   //shooter CAN ID's
   //Note to self: MIGHT need encoder for rotsh (plan is for continuous alignment with goal)
   
-  rev::spark::SparkMax firesh{20, rev::spark::SparkLowLevel::MotorType::kBrushless}; //Leader motor
-  rev::spark::SparkMax firesh2{21, rev::spark::SparkLowLevel::MotorType::kBrushless}; //Follower motor
+  rev::spark::SparkFlex firesh{20, rev::spark::SparkLowLevel::MotorType::kBrushless}; //Leader motor
+  rev::spark::SparkFlex firesh2{21, rev::spark::SparkLowLevel::MotorType::kBrushless}; //Follower motor
 
   rev::spark::SparkClosedLoopController pidfiresh = firesh.GetClosedLoopController();
 
@@ -193,7 +194,9 @@ void RobotInit(){
     .IZone(0);
 
   //sets the follower shooter to actually follow the leader
-  shooterFollowerConfig.Follow(firesh, true);
+  shooterFollowerConfig
+  .SetIdleMode(rev::spark::SparkBaseConfig::IdleMode::kCoast)
+  .Follow(firesh, true);
 
   //setting configurations for wheel and rotational motors
   wheelfl.Configure(driveConfig, rev::spark::SparkMax::ResetMode::kResetSafeParameters,
@@ -394,7 +397,7 @@ void Drive(double x, double y, double rotate){
   frc::SmartDashboard::PutNumber("encfr.Get", encfr.Get());
   frc::SmartDashboard::PutNumber("encbl.Get", encbl.Get());
   frc::SmartDashboard::PutNumber("encbr.Get", encbr.Get());
-  
+
   //if the controllers have no input, just sets all the motors speeds to 0
   if (x == 0 && y == 0 && rotate == 0) {
     wheelfl.Set(0); wheelfr.Set(0); wheelbl.Set(0); wheelbr.Set(0);
