@@ -225,10 +225,10 @@ void RobotInit(){
 
   //shooter configs
   firesh.Configure(shooterLeaderConfig, rev::spark::SparkMax::ResetMode::kResetSafeParameters,
-    rev::spark::SparkMax::PersistMode::kPersistParameters);
+    rev::spark::SparkBase::PersistMode::kPersistParameters);
     
   firesh2.Configure(shooterFollowerConfig, rev::spark::SparkMax::ResetMode::kResetSafeParameters,
-    rev::spark::SparkMax::PersistMode::kPersistParameters);
+    rev::spark::SparkBase::PersistMode::kPersistParameters);
 
 
   //rotation motors need seeding to know what angle they start at
@@ -288,6 +288,7 @@ void RobotInit(){
 
 void RobotPeriodic() {
 
+  //reminder: create gyro-zeroing functionality on robot later
 
   //every 20ms, robot receives new data from limelight
   //currently not important for purposes of drive testing, but it will be in auto
