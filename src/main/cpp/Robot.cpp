@@ -28,6 +28,7 @@
 #include <cmath>
 #include <networktables/NetworkTable.h>
 #include <rev/SparkFlex.h>
+#include <frc/MathUtil.h>
 
 
 
@@ -279,9 +280,7 @@ void RobotInit(){
 
     
 
-  ahrs->Reset();
-  ahrs->ResetDisplacement();
-  ahrs->SetAngleAdjustment(0);
+  ResetGyro();
 }
 
 
@@ -309,6 +308,7 @@ void RobotPeriodic() {
 
 void AutonomousInit() {
   time.Reset();
+  ResetGyro();
   time.Start();
 }
 
@@ -325,6 +325,13 @@ void TeleopInit() {
 
 //every 20ms during teleop robot reads the joystick's percentages
 void TeleopPeriodic() {
+
+  //gyroscope resets when Y is pressed
+  if(controller.GetYButton()){
+    ResetGyro();
+  }
+
+
   //x, y, turn
   //for now, just calling drive on it's own
   //joysticks are inverted because wpi NWU axes co-ordinate system is weird, search it up if interested
@@ -380,10 +387,9 @@ void Drive(double x, double y, double rotate){
   input IF the joystick values are negligible
   */
 
-  if (std::abs(x) < 0.3) x = 0;
-  if (std::abs(y) < 0.3) y = 0;
-  if (std::abs(rotate) < 0.3) rotate = 0;
-
+  x = frc::ApplyDeadband(x, 0.3);
+  y = frc::ApplyDeadband(y, 0.3);
+  rotate = frc::ApplyDeadband(rotate, 0.3);
 
   
   //rot2d reflects the AHRS gyroscope orientation
@@ -481,6 +487,12 @@ void SimulationInit() {}
 
 void SimulationPeriodic() {}
 
+//resets the gyroscope
+void ResetGyro() {
+  ahrs->Reset();
+  ahrs->ResetDisplacement();
+  ahrs->SetAngleAdjustment(0);
+}
 
 };
 
