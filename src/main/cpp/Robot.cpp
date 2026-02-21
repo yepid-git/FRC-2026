@@ -31,7 +31,7 @@
 #include <frc/MathUtil.h>
 #include <frc/kinematics/SwerveDriveOdometry.h>
 #include <units/time.h>
-
+#include <frc/MathUtil.h>
 
 
 class Robot : public frc::TimedRobot {
@@ -41,6 +41,10 @@ class Robot : public frc::TimedRobot {
   double tx;
   double ty;
   double ta;
+
+
+  //angle placeholder
+  double d = 180;
 
   //set location of each wheel relative to center (using WPILib's NWU axes coordinate system)
   frc::Translation2d m_frontLeftLocation{0.213_m, 0.352_m};
@@ -98,10 +102,6 @@ class Robot : public frc::TimedRobot {
   //intake CAN ID
   //rev::spark::SparkMax intake{30, rev::spark::SparkLowLevel::MotorType::kBrushless};
   
-  //degrees in double, later converted to degree_t
-  double d = 180;
-  //speedfactor
-  double speedfactor = 2000;
   //timer object
   frc::Timer time;
 
@@ -119,8 +119,7 @@ class Robot : public frc::TimedRobot {
   frc::XboxController controller{0};
   //frc::XboxController controller2{1}; maybe use later
 
-  //Slew rate limiter is REALLY high, 18 m/s^2 is the limit on acceleration (basically no limit)
-  //change if robot shoots forwards too fast!
+  //limits acceleration to 6m/s^2
   frc::SlewRateLimiter<units::meters_per_second> limitx{3_mps / .5_s};
   frc::SlewRateLimiter<units::meters_per_second> limity{3_mps / .5_s};
 
@@ -164,6 +163,7 @@ void RobotInit(){
     .SetFeedbackSensor(rev::spark::FeedbackSensor::kPrimaryEncoder)
     //pid might be too small?
     .Pid(0.1, 0.000001, 0.00000001)
+    .VelocityFF(0.25)
     .IZone(4000);
 
   steerConfig
@@ -181,7 +181,7 @@ void RobotInit(){
   //for now, disable position wrapping
   steerConfig.closedLoop
     .SetFeedbackSensor(rev::spark::FeedbackSensor::kPrimaryEncoder)
-    .Pid(0.3, 0, 0)
+    .Pid(0.67, 0, 0)
     .PositionWrappingEnabled(true)
     .PositionWrappingInputRange(-PI, PI)
     .IZone(4000);
@@ -250,6 +250,7 @@ void RobotInit(){
   double bloff = -0.1;
   double broff = -0.49;
   
+
   rotfl.GetEncoder().SetPosition((encfl.Get() + floff) * 2.0 * PI);
   rotfr.GetEncoder().SetPosition((encfr.Get() + froff) * 2.0 * PI);
   rotbl.GetEncoder().SetPosition((encbl.Get() + bloff) * 2.0 * PI);
@@ -301,7 +302,7 @@ void RobotInit(){
 
 void RobotPeriodic() {
 
-  //reminder: create gyro-zeroing functionality on robot later
+  UpdatePose();
 
   //every 20ms, robot receives new data from limelight
   //currently not important for purposes of drive testing, but it will be in auto
@@ -333,7 +334,6 @@ void AutonomousPeriodic() {
 void TeleopInit() {
   time.Stop();
   time.Reset();
-  speedfactor = 2000;
 }
 
 
@@ -364,8 +364,6 @@ void TeleopPeriodic() {
   } else {
     firesh.StopMotor();
   }
-
-  UpdatePose();
 
 }
 
@@ -403,9 +401,9 @@ void Drive(double x, double y, double rotate){
   input IF the joystick values are negligible
   */
 
-  x = frc::ApplyDeadband(x, 0.3);
-  y = frc::ApplyDeadband(y, 0.3);
-  rotate = frc::ApplyDeadband(rotate, 0.3);
+  x = frc::ApplyDeadband(x, 0.1);
+  y = frc::ApplyDeadband(y, 0.1);
+  rotate = frc::ApplyDeadband(rotate, 0.1);
 
   
   //rot2d reflects the AHRS gyroscope orientation
@@ -421,12 +419,16 @@ void Drive(double x, double y, double rotate){
   frc::SmartDashboard::PutNumber("encbl.Get", encbl.Get());
   frc::SmartDashboard::PutNumber("encbr.Get", encbr.Get());
 
-  //If the controllers have no input, just sets all the motors speeds to 0
+
+  //EXPERIMENTAL
+  /* Testing to see if this is even necessary
   if (x == 0 && y == 0 && rotate == 0) {
+      //If the controllers have no input, just sets all the motors speeds to 0
     wheelfl.Set(0); wheelfr.Set(0); wheelbl.Set(0); wheelbr.Set(0);
     rotfl.Set(0);   rotfr.Set(0);   rotbl.Set(0);   rotbr.Set(0);
     return; 
   }
+  */
 
 
   //this is where joystick percentages become velocity!
@@ -434,8 +436,8 @@ void Drive(double x, double y, double rotate){
   //max x & y speed become 4m/s
   //max rotation speed is 3 rad/s
   units::radians_per_second_t rad{rotate*3};
-  units::meters_per_second_t speedy{y*8};
-  units::meters_per_second_t speedx{x*8};
+  units::meters_per_second_t speedy{y*4};
+  units::meters_per_second_t speedx{x*4};
 
   /* ChassisSpeeds::FromFieldRelativeSpeeds takes in desired x, desired y, and angular velocities
   as well as the robots current angle
@@ -449,6 +451,8 @@ void Drive(double x, double y, double rotate){
   );
 
   //converts the speeds to swerve module states
+
+  speeds = frc::ChassisSpeeds::Discretize(speeds, 0.02_s);
 
   auto modules = kinematics.ToSwerveModuleStates(speeds);
 
@@ -472,12 +476,14 @@ void Drive(double x, double y, double rotate){
   auto blOptimized = frc::SwerveModuleState::Optimize(bl, blAngle);
   auto brOptimized = frc::SwerveModuleState::Optimize(br, brAngle);
 
-  /*
+  /* In place methods deprecated 
   fl.Optimize(flAngle);
   fr.Optimize(frAngle);
   bl.Optimize(blAngle);
   br.Optimize(brAngle);
   */
+
+
 
   //set state takes in the perfectly optimized state, the movement controller, and steering controller
   //optimized state contains two values, the speed and angle
