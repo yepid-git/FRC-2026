@@ -12,7 +12,6 @@
 #include <frc/SerialPort.h>
 #include <frc/SPI.h>
 #include <frc/kinematics/ChassisSpeeds.h>
-#include <frc/kinematics/SwerveModuleState.h>
 #include <rev/SparkMax.h>
 #include <frc/motorcontrol/Spark.h>
 #include <frc/AnalogEncoder.h>
@@ -31,7 +30,7 @@
 #include <frc/MathUtil.h>
 #include <frc/kinematics/SwerveDriveOdometry.h>
 #include <units/time.h>
-#include <frc/MathUtil.h>
+
 
 
 class Robot : public frc::TimedRobot {
@@ -457,7 +456,7 @@ void Drive(double x, double y, double rotate){
   auto modules = kinematics.ToSwerveModuleStates(speeds);
 
   //safety to prevent wheels from spinning too fast
-  kinematics.DesaturateWheelSpeeds(&modules, 8_mps);
+  kinematics.DesaturateWheelSpeeds(&modules, 4_mps);
 
   //just stores the swerve module states in each motor
   auto [fl, fr, bl, br] = modules;
