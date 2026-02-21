@@ -30,6 +30,7 @@
 #include <rev/SparkFlex.h>
 #include <frc/MathUtil.h>
 #include <frc/kinematics/SwerveDriveOdometry.h>
+#include <units/time.h>
 
 
 
@@ -229,10 +230,10 @@ void RobotInit(){
 
 
   //shooter configs
-  firesh.Configure(shooterLeaderConfig, rev::spark::SparkMax::ResetMode::kResetSafeParameters,
+  firesh.Configure(shooterLeaderConfig, rev::spark::SparkBase::ResetMode::kResetSafeParameters,
     rev::spark::SparkBase::PersistMode::kPersistParameters);
     
-  firesh2.Configure(shooterFollowerConfig, rev::spark::SparkMax::ResetMode::kResetSafeParameters,
+  firesh2.Configure(shooterFollowerConfig, rev::spark::SparkBase::ResetMode::kResetSafeParameters,
     rev::spark::SparkBase::PersistMode::kPersistParameters);
 
 
