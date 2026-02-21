@@ -29,6 +29,7 @@
 #include <networktables/NetworkTable.h>
 #include <rev/SparkFlex.h>
 #include <frc/MathUtil.h>
+#include <frc/kinematics/SwerveDriveOdometry.h>
 
 
 
@@ -126,6 +127,17 @@ class Robot : public frc::TimedRobot {
   bool m_manual_mode = true;
 
 
+
+  //odometry object
+  //tracks robot position on field by using the motor encoders
+  frc::SwerveDriveOdometry<4> odometry{
+    kinematics,
+    ahrs->GetRotation2d(),
+    GetSwervePositions(),
+    frc::Pose2d{0_m, 0_m, 0_rad}
+  };
+
+  frc::Pose2d pose = odometry.GetPose();
 
 void RobotInit(){
   //limelight configs (disabled for now)
@@ -492,6 +504,52 @@ void ResetGyro() {
   ahrs->Reset();
   ahrs->ResetDisplacement();
   ahrs->SetAngleAdjustment(0);
+}
+
+//reset odometry
+void ResetOdometry() {
+  odometry.ResetPosition(
+  ahrs->GetRotation2d(), 
+  GetSwervePositions(),
+  frc::Pose2d{0_m, 0_m, 0_rad}
+  );
+
+}
+
+//helper function to update pose
+void UpdatePose(){
+  pose = odometry.Update(
+    ahrs->GetRotation2d(),
+    GetSwervePositions()
+  );
+}
+
+//helper function to get the positions of each swerve module
+wpi::array<frc::SwerveModulePosition, 4> GetSwervePositions(){
+  return {
+    frc::SwerveModulePosition{
+      units::meter_t{wheelfl.GetEncoder().GetPosition()}, 
+      frc::Rotation2d{units::radian_t{rotfl.GetEncoder().GetPosition()}}
+  },
+
+  frc::SwerveModulePosition{
+      units::meter_t{wheelfr.GetEncoder().GetPosition()}, 
+      frc::Rotation2d{units::radian_t{rotfr.GetEncoder().GetPosition()}}
+  },
+
+  frc::SwerveModulePosition{
+      units::meter_t{wheelbl.GetEncoder().GetPosition()}, 
+      frc::Rotation2d{units::radian_t{rotbl.GetEncoder().GetPosition()}}
+  },
+
+  frc::SwerveModulePosition{
+      units::meter_t{wheelbr.GetEncoder().GetPosition()}, 
+      frc::Rotation2d{units::radian_t{rotbr.GetEncoder().GetPosition()}}
+  }
+};
+
+
+
 }
 
 };
