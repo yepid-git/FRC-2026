@@ -126,6 +126,10 @@ class Robot : public frc::TimedRobot {
   //Controller Mode Variables
   bool m_manual_mode = true;
 
+  //declaring odometry object at class level using pointer, to avoid scoping issues
+  std::unique_ptr<frc::SwerveDriveOdometry<4>> odometry;
+  frc::Pose2d pose;
+
 
 void RobotInit(){
   //limelight configs (disabled for now)
@@ -279,14 +283,14 @@ void RobotInit(){
     
   //odometry object
   //tracks robot position on field by using the motor encoders
-  frc::SwerveDriveOdometry<4> odometry{
+  odometry = std::make_unique<frc::SwerveDriveOdometry<4>>(
     kinematics,
     ahrs->GetRotation2d(),
     GetSwervePositions(),
     frc::Pose2d{0_m, 0_m, 0_rad}
-  };
+  );
 
-  frc::Pose2d pose = odometry.GetPose();
+  pose = odometry->GetPose();
 
 
   ResetGyro();
@@ -416,7 +420,7 @@ void Drive(double x, double y, double rotate){
   frc::SmartDashboard::PutNumber("encbl.Get", encbl.Get());
   frc::SmartDashboard::PutNumber("encbr.Get", encbr.Get());
 
-  //if the controllers have no input, just sets all the motors speeds to 0
+  //If the controllers have no input, just sets all the motors speeds to 0
   if (x == 0 && y == 0 && rotate == 0) {
     wheelfl.Set(0); wheelfr.Set(0); wheelbl.Set(0); wheelbr.Set(0);
     rotfl.Set(0);   rotfr.Set(0);   rotbl.Set(0);   rotbr.Set(0);
@@ -507,7 +511,7 @@ void ResetGyro() {
 
 //reset odometry
 void ResetOdometry() {
-  odometry.ResetPosition(
+  odometry->ResetPosition(
   ahrs->GetRotation2d(), 
   GetSwervePositions(),
   frc::Pose2d{0_m, 0_m, 0_rad}
@@ -517,7 +521,7 @@ void ResetOdometry() {
 
 //helper function to update pose
 void UpdatePose(){
-  pose = odometry.Update(
+  pose = odometry->Update(
     ahrs->GetRotation2d(),
     GetSwervePositions()
   );
