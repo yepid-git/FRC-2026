@@ -127,18 +127,6 @@ class Robot : public frc::TimedRobot {
   bool m_manual_mode = true;
 
 
-
-  //odometry object
-  //tracks robot position on field by using the motor encoders
-  frc::SwerveDriveOdometry<4> odometry{
-    kinematics,
-    ahrs->GetRotation2d(),
-    GetSwervePositions(),
-    frc::Pose2d{0_m, 0_m, 0_rad}
-  };
-
-  frc::Pose2d pose = odometry.GetPose();
-
 void RobotInit(){
   //limelight configs (disabled for now)
   /*
@@ -288,9 +276,18 @@ void RobotInit(){
     .Pid(0.0005, 0.0000001, 0.0)
     .IZone(4000);
 
-
-
     
+  //odometry object
+  //tracks robot position on field by using the motor encoders
+  frc::SwerveDriveOdometry<4> odometry{
+    kinematics,
+    ahrs->GetRotation2d(),
+    GetSwervePositions(),
+    frc::Pose2d{0_m, 0_m, 0_rad}
+  };
+
+  frc::Pose2d pose = odometry.GetPose();
+
 
   ResetGyro();
 }
@@ -362,6 +359,8 @@ void TeleopPeriodic() {
   } else {
     firesh.StopMotor();
   }
+
+  UpdatePose();
 
 }
 
