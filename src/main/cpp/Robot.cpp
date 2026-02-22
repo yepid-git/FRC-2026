@@ -1,6 +1,6 @@
 #define PI 3.14159265358979323846
 
-//#include "LimelightHelpers.h"
+#include "LimelightHelpers.h"
 #include <frc/TimedRobot.h>
 #include <frc/filter/SlewRateLimiter.h>
 #include <frc/XboxController.h>
@@ -32,6 +32,10 @@
 #include <units/time.h>
 
 
+//change color based on our alliance
+char color = 'r';
+//char color = 'b';
+
 
 class Robot : public frc::TimedRobot {
 
@@ -42,8 +46,14 @@ class Robot : public frc::TimedRobot {
   double ta;
 
 
-  //angle placeholder
-  double d = 180;
+  //gear reduction placeholders
+  //rotation (left to right) reduction and orientation (up and down) reduction 
+  double rotred = 0;
+  double orired = 0;
+
+  //placeholder variable for the goal hub's position on the field
+  frc::Translation2d GoalPosition{0_m, 0_m};
+
 
   //set location of each wheel relative to center (using WPILib's NWU axes coordinate system)
   frc::Translation2d m_frontLeftLocation{0.213_m, 0.352_m};
@@ -97,6 +107,12 @@ class Robot : public frc::TimedRobot {
   //configs for shooters
   rev::spark::SparkBaseConfig shooterLeaderConfig{};
   rev::spark::SparkBaseConfig shooterFollowerConfig{};
+
+
+  //shooter rotation ID's
+  //each motor rotates shooter in x or y axis
+  rev::spark::SparkFlex rotshx{22, rev::spark::SparkLowLevel::MotorType::kBrushless};
+  rev::spark::SparkFlex rotshy{23, rev::spark::SparkLowLevel::MotorType::kBrushless};
 
   //intake CAN ID
   //rev::spark::SparkMax intake{30, rev::spark::SparkLowLevel::MotorType::kBrushless};
@@ -292,9 +308,9 @@ void RobotInit(){
   );
 
   pose = odometry->GetPose();
-
-
   ResetGyro();
+
+
 }
 
 
@@ -392,8 +408,7 @@ void SetState(frc::SwerveModuleState optState, rev::spark::SparkMax& driveSpark,
 
 //drive grabs the joystick PERCENTAGES, and converts them into VELOCITY
 void Drive(double x, double y, double rotate){
-  //grabs robot's angle relative to driverd station, in other words it's current field orientation
-  d = 360 - ahrs->GetAngle();
+
 
   /* 
   since joysticks don't truly return to "zero", the deadbands (if statements) are there to ignore
@@ -417,17 +432,6 @@ void Drive(double x, double y, double rotate){
   frc::SmartDashboard::PutNumber("encfr.Get", encfr.Get());
   frc::SmartDashboard::PutNumber("encbl.Get", encbl.Get());
   frc::SmartDashboard::PutNumber("encbr.Get", encbr.Get());
-
-
-  //EXPERIMENTAL
-  /* Testing to see if this is even necessary
-  if (x == 0 && y == 0 && rotate == 0) {
-      //If the controllers have no input, just sets all the motors speeds to 0
-    wheelfl.Set(0); wheelfr.Set(0); wheelbl.Set(0); wheelbr.Set(0);
-    rotfl.Set(0);   rotfr.Set(0);   rotbl.Set(0);   rotbr.Set(0);
-    return; 
-  }
-  */
 
 
   //this is where joystick percentages become velocity!
@@ -474,14 +478,6 @@ void Drive(double x, double y, double rotate){
   auto frOptimized = frc::SwerveModuleState::Optimize(fr, frAngle);
   auto blOptimized = frc::SwerveModuleState::Optimize(bl, blAngle);
   auto brOptimized = frc::SwerveModuleState::Optimize(br, brAngle);
-
-  /* In place methods deprecated 
-  fl.Optimize(flAngle);
-  fr.Optimize(frAngle);
-  bl.Optimize(blAngle);
-  br.Optimize(brAngle);
-  */
-
 
 
   //set state takes in the perfectly optimized state, the movement controller, and steering controller
@@ -531,6 +527,7 @@ void UpdatePose(){
     ahrs->GetRotation2d(),
     GetSwervePositions()
   );
+
 }
 
 //helper function to get the positions of each swerve module
@@ -558,8 +555,9 @@ wpi::array<frc::SwerveModulePosition, 4> GetSwervePositions(){
 };
 
 
-
 }
+
+
 
 };
 
