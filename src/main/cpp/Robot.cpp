@@ -472,9 +472,9 @@ void Drive(double x, double y, double rotate){
   input IF the joystick values are negligible
   */
 
-  x = frc::ApplyDeadband(x, 0.1);
-  y = frc::ApplyDeadband(y, 0.1);
-  rotate = frc::ApplyDeadband(rotate, 0.1);
+  x = frc::ApplyDeadband(x, 0.2);
+  y = frc::ApplyDeadband(y, 0.2);
+  rotate = frc::ApplyDeadband(rotate, 0.2);
 
   
   //rot2d reflects the AHRS gyroscope orientation
