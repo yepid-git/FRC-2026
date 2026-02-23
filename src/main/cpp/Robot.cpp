@@ -126,6 +126,7 @@ class Robot : public frc::TimedRobot {
   //limits acceleration to 6m/s^2
   frc::SlewRateLimiter<units::meters_per_second> limitx{3_mps / .5_s};
   frc::SlewRateLimiter<units::meters_per_second> limity{3_mps / .5_s};
+  frc::SlewRateLimiter<units::radians_per_second> limitrot{3_rad_per_s / .5_s};
 
   //Controller Mode Variables
   bool m_manual_mode = true;
@@ -183,7 +184,7 @@ void RobotInit(){
 
   steerConfig.closedLoop
     .SetFeedbackSensor(rev::spark::FeedbackSensor::kPrimaryEncoder)
-    .Pid(0.67, 0, 0)
+    .Pid(0.1, 0, 0.01)
     .PositionWrappingEnabled(true)
     .PositionWrappingInputRange(-PI, PI)
     .IZone(4000);
@@ -272,10 +273,15 @@ void RobotInit(){
 
   //when finding offset values, if offset is less than or equal to 0.5, keep it positive as is
   //if offset is negative, set it equal to -(1-offset) 
-  rotfl.GetEncoder().SetPosition((encfl.Get()) * 2.0 * PI);
-  rotfr.GetEncoder().SetPosition((encfr.Get()) * 2.0 * PI);
-  rotbl.GetEncoder().SetPosition((encbl.Get()) * 2.0 * PI);
-  rotbr.GetEncoder().SetPosition((encbr.Get()) * 2.0 * PI);
+  double floff = 0.02;
+  double froff = -0.36;
+  double bloff = -0.1;
+  double broff = -0.49;
+
+  rotfl.GetEncoder().SetPosition((encfl.Get() + floff) * 2.0 * PI);
+  rotfr.GetEncoder().SetPosition((encfr.Get() + froff) * 2.0 * PI);
+  rotbl.GetEncoder().SetPosition((encbl.Get() + bloff) * 2.0 * PI);
+  rotbr.GetEncoder().SetPosition((encbr.Get() + broff) * 2.0 * PI);
   
 
   //idk what this is for tbh
@@ -500,11 +506,14 @@ void Drive(double x, double y, double rotate){
     //uses the slewrate limiter to determine necessary chassis speeds
     limitx.Calculate(speedx),
     limity.Calculate(speedy),
-    rad * 1.2,  // sensitivity multiplier?? increase if rotation is sluggish, decrease if jittery
+    limitrot.Calculate(rad * 1.2),  // sensitivity multiplier?? increase if rotation is sluggish, decrease if jittery
     rot2d  // This is what enables field-oriented control
   );
 
   //converts the speeds to swerve module states
+
+  speeds = frc::ChassisSpeeds::Discretize(speeds, 0.02_s);
+
   auto modules = kinematics.ToSwerveModuleStates(speeds);
 
   //safety to prevent wheels from spinning too fast
