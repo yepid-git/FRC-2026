@@ -32,10 +32,6 @@
 #include <units/time.h>
 
 
-//change color based on our alliance
-char color = 'r';
-//char color = 'b';
-
 
 class Robot : public frc::TimedRobot {
 
@@ -46,13 +42,8 @@ class Robot : public frc::TimedRobot {
   double ta;
 
 
-  //gear reduction placeholders
-  //rotation (left to right) reduction and orientation (up and down) reduction 
-  double rotred = 0;
-  double orired = 0;
-
   //placeholder variable for the goal hub's position on the field
-  frc::Translation2d GoalPosition{0_m, 0_m};
+  frc::Translation2d GoalPosition{4.612_m, 4.021_m};
 
 
   //set location of each wheel relative to center (using WPILib's NWU axes coordinate system)
@@ -91,14 +82,10 @@ class Robot : public frc::TimedRobot {
   rev::spark::SparkMax rotbl{4, rev::spark::SparkLowLevel::MotorType::kBrushless};
   frc::AnalogEncoder encbl{0};
   rev::spark::SparkMax rotbr{8, rev::spark::SparkLowLevel::MotorType::kBrushless};
-  //dont think this relative encoder is necessary?
-  //rev::spark::SparkRelativeEncoder m_brSteerEnc = rotbr.GetEncoder();
   frc::AnalogEncoder encbr{1};
 
 
-  //shooter CAN ID's
-  //Note to self: MIGHT need encoder for rotsh (plan is for continuous alignment with goal)
-  
+  //shooter CAN ID's  
   rev::spark::SparkFlex firesh{20, rev::spark::SparkLowLevel::MotorType::kBrushless}; //Leader motor
   rev::spark::SparkFlex firesh2{21, rev::spark::SparkLowLevel::MotorType::kBrushless}; //Follower motor
 
@@ -110,10 +97,12 @@ class Robot : public frc::TimedRobot {
 
 
   //shooter rotation ID's
-  //each motor rotates shooter in x or y axis
-  rev::spark::SparkFlex rotshx{22, rev::spark::SparkLowLevel::MotorType::kBrushless};
-  rev::spark::SparkFlex rotshy{23, rev::spark::SparkLowLevel::MotorType::kBrushless};
+  //each motor rotates shooter in x or y axis, ignore vertical for now
+  rev::spark::SparkMax HorizontalTurret{22, rev::spark::SparkLowLevel::MotorType::kBrushless};
+  //rev::spark::SparkMax VerticalTurret{23, rev::spark::SparkLowLevel::MotorType::kBrushless};
 
+
+  rev::spark::SparkBaseConfig HorizontalTurretConfig{};
   //intake CAN ID
   //rev::spark::SparkMax intake{30, rev::spark::SparkLowLevel::MotorType::kBrushless};
   
@@ -192,8 +181,6 @@ void RobotInit(){
     .PositionConversionFactor((2.0 * PI) / (150.0 / 7.0))
     .VelocityConversionFactor(((2.0 * PI) / (150.0 / 7.0)) / 60.0);
 
-
-  //for now, disable position wrapping
   steerConfig.closedLoop
     .SetFeedbackSensor(rev::spark::FeedbackSensor::kPrimaryEncoder)
     .Pid(0.67, 0, 0)
@@ -218,6 +205,27 @@ void RobotInit(){
   shooterFollowerConfig
   .SetIdleMode(rev::spark::SparkBaseConfig::IdleMode::kCoast)
   .Follow(firesh, true);
+
+
+  HorizontalTurretConfig
+  .Inverted(false)
+  .SetIdleMode(rev::spark::SparkBaseConfig::IdleMode::kBrake);
+
+  //configs for the turret's rotational motors
+  HorizontalTurretConfig.encoder
+    .PositionConversionFactor((2.0 * PI) / 50.0) // 50:1 Gearbox ratio
+    .VelocityConversionFactor(((2.0 * PI) / 50.0) / 60.0);
+
+  HorizontalTurretConfig.closedLoop
+  .SetFeedbackSensor(rev::spark::FeedbackSensor::kPrimaryEncoder)
+  .Pid(0.5, 0.0, 0.0)
+  .PositionWrappingEnabled(false);
+
+  HorizontalTurretConfig.softLimit
+    .ForwardSoftLimit(PI)  // 180 degrees
+    .ForwardSoftLimitEnabled(true)
+    .ReverseSoftLimit(-PI) // -180 degrees
+    .ReverseSoftLimitEnabled(true);
 
   //setting configurations for wheel and rotational motors
   wheelfl.Configure(driveConfig, rev::spark::SparkMax::ResetMode::kResetSafeParameters,
@@ -251,12 +259,15 @@ void RobotInit(){
   firesh2.Configure(shooterFollowerConfig, rev::spark::SparkBase::ResetMode::kResetSafeParameters,
     rev::spark::SparkBase::PersistMode::kPersistParameters);
 
+  HorizontalTurret.Configure(HorizontalTurretConfig, rev::spark::SparkBase::ResetMode::kResetSafeParameters,
+    rev::spark::SparkBase::PersistMode::kPersistParameters);
+
+
 
   //rotation motors need seeding to know what angle they start at
   //similar to the absolute encoders, the analog encoders also return the wheel's angle in ROTATIONS
   //we want RADIANS!!!
   //2pi rad per rotation
-  //note to self: apparently we need offsets, fix later.
 
   //when finding offset values, if offset is less than or equal to 0.5, keep it positive as is
   //if offset is negative, set it equal to -(1-offset) 
@@ -264,7 +275,6 @@ void RobotInit(){
   double froff = -0.36;
   double bloff = -0.1;
   double broff = -0.49;
-  
 
   rotfl.GetEncoder().SetPosition((encfl.Get() + floff) * 2.0 * PI);
   rotfr.GetEncoder().SetPosition((encfr.Get() + froff) * 2.0 * PI);
@@ -355,9 +365,27 @@ void TeleopInit() {
 //every 20ms during teleop robot reads the joystick's percentages
 void TeleopPeriodic() {
 
+  //Resetting functionalities, MUST do at the start of every match
   //gyroscope resets when Y is pressed
   if(controller.GetYButton()){
     ResetGyro();
+  }
+
+
+  //Sets turret position to zero, and limtis rotational movement.
+  if (controller.GetPOV() == 90) {
+    HorizontalTurret.Set(0.1);
+  } else if (controller.GetPOV() == 270){
+    HorizontalTurret.Set(-0.1);
+  } else if (controller.GetStartButton()) {
+    HorizontalTurret.GetEncoder().SetPosition(0);
+  } else {
+    if(controller.GetAButton()){
+      AlignTurret();
+    } else {
+      HorizontalTurret.StopMotor();
+    }
+
   }
 
 
@@ -379,6 +407,33 @@ void TeleopPeriodic() {
   } else {
     firesh.StopMotor();
   }
+
+
+
+
+
+
+}
+
+//helper function to align the turret
+void AlignTurret(){
+  //calculate distance from robot to goal
+  frc::Translation2d poseTranslation = pose.Translation();
+  frc::Translation2d distance = GoalPosition - poseTranslation;
+
+  //calculate angle based on the x & y distances
+  frc::Rotation2d angle = distance.Angle();
+
+  frc::Rotation2d TurretTarget = angle - pose.Rotation();
+
+  //Sets the rotational motor's angle, to that position
+  HorizontalTurret.GetClosedLoopController().SetReference(
+    TurretTarget.Radians().value(),
+  rev::spark::SparkBase::ControlType::kPosition
+  );
+
+  //debugging utility
+  frc::SmartDashboard::PutNumber("Turret Target (Rad)", TurretTarget.Radians().value());
 
 }
 
@@ -553,6 +608,7 @@ wpi::array<frc::SwerveModulePosition, 4> GetSwervePositions(){
       frc::Rotation2d{units::radian_t{rotbr.GetEncoder().GetPosition()}}
   }
 };
+
 
 
 }
