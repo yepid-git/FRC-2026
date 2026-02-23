@@ -272,15 +272,10 @@ void RobotInit(){
 
   //when finding offset values, if offset is less than or equal to 0.5, keep it positive as is
   //if offset is negative, set it equal to -(1-offset) 
-  double floff = 0.02;
-  double froff = -0.36;
-  double bloff = -0.1;
-  double broff = -0.49;
-
-  rotfl.GetEncoder().SetPosition((encfl.Get() + floff) * 2.0 * PI);
-  rotfr.GetEncoder().SetPosition((encfr.Get() + froff) * 2.0 * PI);
-  rotbl.GetEncoder().SetPosition((encbl.Get() + bloff) * 2.0 * PI);
-  rotbr.GetEncoder().SetPosition((encbr.Get() + broff) * 2.0 * PI);
+  rotfl.GetEncoder().SetPosition((encfl.Get()) * 2.0 * PI);
+  rotfr.GetEncoder().SetPosition((encfr.Get()) * 2.0 * PI);
+  rotbl.GetEncoder().SetPosition((encbl.Get()) * 2.0 * PI);
+  rotbr.GetEncoder().SetPosition((encbr.Get()) * 2.0 * PI);
   
 
   //idk what this is for tbh
@@ -510,9 +505,6 @@ void Drive(double x, double y, double rotate){
   );
 
   //converts the speeds to swerve module states
-
-  speeds = frc::ChassisSpeeds::Discretize(speeds, 0.02_s);
-
   auto modules = kinematics.ToSwerveModuleStates(speeds);
 
   //safety to prevent wheels from spinning too fast
