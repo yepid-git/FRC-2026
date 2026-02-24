@@ -227,7 +227,7 @@ void RobotInit(){
   .SetFeedbackSensor(rev::spark::FeedbackSensor::kPrimaryEncoder)
   .Pid(0.2, 0.0, 0.0)
   .PositionWrappingEnabled(false)
-  .OutputRange(-0.05, 0.05);
+  .OutputRange(-0.2, 0.2);
 
   HorizontalTurretConfig.softLimit
     .ForwardSoftLimit(PI)  // 180 degrees
@@ -406,10 +406,10 @@ void TeleopPeriodic() {
   //Sets turret position to zero, and limtis rotational movement.
   if (controller.GetPOV() == 90) {
     //right
-    HorizontalTurret.Set(0.05);
+    HorizontalTurret.Set(0.2);
   } else if (controller.GetPOV() == 270){
     //left
-    HorizontalTurret.Set(-0.05);
+    HorizontalTurret.Set(-0.2);
   } else if (controller.GetPOV() == 180){
     //down
     VerticalTurret.Set(-0.05);
