@@ -242,7 +242,7 @@ void RobotInit(){
   
   VerticalTurretConfig.closedLoop
     .SetFeedbackSensor(rev::spark::FeedbackSensor::kPrimaryEncoder)
-    .Pid(0.5, 0.0, 0.0)
+    .Pid(0.2, 0.0, 0.0)
     .PositionWrappingEnabled(false)
     .OutputRange(-0.05, 0.05);
 
