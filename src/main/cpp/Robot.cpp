@@ -450,16 +450,20 @@ void TeleopPeriodic() {
   } else {
     firesh.StopMotor();
   }
+  
 
 
   //trigger
   if(controller.GetLeftTriggerAxis()){
     Indexer.Set(-0.3);
+  } else {
+    Indexer.StopMotor();
   }
   if(controller.GetRightTriggerAxis()){
     Indexer.Set(0.3);
+  } else {
+    Indexer.StopMotor();
   }
-
 
 
 
