@@ -104,6 +104,11 @@ class Robot : public frc::TimedRobot {
 
   rev::spark::SparkBaseConfig HorizontalTurretConfig{};
   rev::spark::SparkBaseConfig VerticalTurretConfig{};
+
+  //indexer CAN ID's
+  rev::spark::SparkMax Indexer{10, rev::spark::SparkLowLevel::MotorType::kBrushless};
+  rev::spark::SparkBaseConfig IndexerConfig{};
+
   //intake CAN ID
   //rev::spark::SparkMax intake{30, rev::spark::SparkLowLevel::MotorType::kBrushless};
   
@@ -220,16 +225,15 @@ void RobotInit(){
 
   HorizontalTurretConfig.closedLoop
   .SetFeedbackSensor(rev::spark::FeedbackSensor::kPrimaryEncoder)
-  .Pid(0.5, 0.0, 0.0)
+  .Pid(0.2, 0.0, 0.0)
   .PositionWrappingEnabled(false)
-  .OutputRange(-0.1, 0.1);
+  .OutputRange(-0.05, 0.05);
 
   HorizontalTurretConfig.softLimit
     .ForwardSoftLimit(PI)  // 180 degrees
     .ForwardSoftLimitEnabled(true)
     .ReverseSoftLimit(-PI) // -180 degrees
     .ReverseSoftLimitEnabled(true);
-
 
 
   VerticalTurretConfig
@@ -241,6 +245,14 @@ void RobotInit(){
     .Pid(0.5, 0.0, 0.0)
     .PositionWrappingEnabled(false)
     .OutputRange(-0.05, 0.05);
+
+
+  
+  IndexerConfig.closedLoop
+  .SetFeedbackSensor(rev::spark::FeedbackSensor::kPrimaryEncoder)
+  .Pid(0.3, 0.0, 0.0)
+  .PositionWrappingEnabled(false)
+  .OutputRange(-0.5, 0.5);
 
   //setting configurations for wheel and rotational motors
   wheelfl.Configure(driveConfig, rev::spark::SparkMax::ResetMode::kResetSafeParameters,
@@ -280,7 +292,8 @@ void RobotInit(){
   VerticalTurret.Configure(VerticalTurretConfig, rev::spark::SparkBase::ResetMode::kResetSafeParameters,
     rev::spark::SparkBase::PersistMode::kPersistParameters);
 
-
+  Indexer.Configure(IndexerConfig, rev::spark::SparkBase::ResetMode::kResetSafeParameters,
+    rev::spark::SparkBase::PersistMode::kPersistParameters);
 
   //rotation motors need seeding to know what angle they start at
   //similar to the absolute encoders, the analog encoders also return the wheel's angle in ROTATIONS
@@ -410,6 +423,7 @@ void TeleopPeriodic() {
       AlignTurret();
     } else {
       HorizontalTurret.StopMotor();
+      VerticalTurret.StopMotor();
     }
 
   }
@@ -435,6 +449,13 @@ void TeleopPeriodic() {
   }
 
 
+  //trigger
+  if(controller.GetLeftTriggerAxis()){
+    Indexer.Set(-0.3);
+  }
+  if(controller.GetRightTriggerAxis()){
+    Indexer.Set(0.3);
+  }
 
 
 
