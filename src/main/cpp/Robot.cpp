@@ -99,10 +99,11 @@ class Robot : public frc::TimedRobot {
   //shooter rotation ID's
   //each motor rotates shooter in x or y axis, ignore vertical for now
   rev::spark::SparkMax HorizontalTurret{22, rev::spark::SparkLowLevel::MotorType::kBrushless};
-  //rev::spark::SparkMax VerticalTurret{23, rev::spark::SparkLowLevel::MotorType::kBrushless};
+  rev::spark::SparkMax VerticalTurret{23, rev::spark::SparkLowLevel::MotorType::kBrushless};
 
 
   rev::spark::SparkBaseConfig HorizontalTurretConfig{};
+  rev::spark::SparkBaseConfig VerticalTurretConfig{};
   //intake CAN ID
   //rev::spark::SparkMax intake{30, rev::spark::SparkLowLevel::MotorType::kBrushless};
   
@@ -229,6 +230,18 @@ void RobotInit(){
     .ReverseSoftLimit(-PI) // -180 degrees
     .ReverseSoftLimitEnabled(true);
 
+
+
+  VerticalTurretConfig
+    .Inverted(false)
+    .SetIdleMode(rev::spark::SparkBaseConfig::IdleMode::kBrake);
+  
+  VerticalTurretConfig.closedLoop
+    .SetFeedbackSensor(rev::spark::FeedbackSensor::kPrimaryEncoder)
+    .Pid(0.5, 0.0, 0.0)
+    .PositionWrappingEnabled(false)
+    .OutputRange(-0.05, 0.05);
+
   //setting configurations for wheel and rotational motors
   wheelfl.Configure(driveConfig, rev::spark::SparkMax::ResetMode::kResetSafeParameters,
     rev::spark::SparkMax::PersistMode::kPersistParameters);
@@ -262,6 +275,9 @@ void RobotInit(){
     rev::spark::SparkBase::PersistMode::kPersistParameters);
 
   HorizontalTurret.Configure(HorizontalTurretConfig, rev::spark::SparkBase::ResetMode::kResetSafeParameters,
+    rev::spark::SparkBase::PersistMode::kPersistParameters);
+  
+  VerticalTurret.Configure(VerticalTurretConfig, rev::spark::SparkBase::ResetMode::kResetSafeParameters,
     rev::spark::SparkBase::PersistMode::kPersistParameters);
 
 
@@ -376,9 +392,17 @@ void TeleopPeriodic() {
 
   //Sets turret position to zero, and limtis rotational movement.
   if (controller.GetPOV() == 90) {
+    //right
     HorizontalTurret.Set(0.05);
   } else if (controller.GetPOV() == 270){
+    //left
     HorizontalTurret.Set(-0.05);
+  } else if (controller.GetPOV() == 180){
+    //down
+    VerticalTurret.Set(-0.05);
+  } else if (controller.GetPOV() == 0){
+    //up
+    VerticalTurret.Set(0.05);
   } else if (controller.GetStartButton()) {
     HorizontalTurret.GetEncoder().SetPosition(0);
   } else {
