@@ -439,7 +439,7 @@ void TeleopPeriodic() {
 
 
   //shooter code
-  double targetrpm = 2000;
+  double targetrpm = 4000;
 
   //if bumper is pressed, fire both motors at the target rpm, otherwise set their velocities to 0
   if(controller.GetRightBumper()){
