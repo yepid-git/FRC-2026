@@ -429,6 +429,9 @@ void TeleopPeriodic() {
   }
 
 
+  if(controller.GetXButton()){
+    VerticalTurret.StopMotor();
+  }
   //x, y, turn
   //for now, just calling drive on it's own
   //joysticks are inverted because wpi NWU axes co-ordinate system is weird, search it up if interested
@@ -436,7 +439,7 @@ void TeleopPeriodic() {
 
 
   //shooter code
-  double targetrpm = 5867;
+  double targetrpm = 2000;
 
   //if bumper is pressed, fire both motors at the target rpm, otherwise set their velocities to 0
   if(controller.GetRightBumper()){
