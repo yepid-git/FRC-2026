@@ -456,14 +456,12 @@ void TeleopPeriodic() {
   //trigger
   if(controller.GetLeftTriggerAxis()){
     Indexer.Set(-0.3);
-  } else {
-    Indexer.StopMotor();
-  }
-  if(controller.GetRightTriggerAxis()){
+  } else if (controller.GetRightTriggerAxis()){
     Indexer.Set(0.3);
   } else {
     Indexer.StopMotor();
   }
+  
 
 
 
