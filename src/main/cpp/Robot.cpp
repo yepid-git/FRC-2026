@@ -41,6 +41,9 @@ class Robot : public frc::TimedRobot {
   double ty;
   double ta;
 
+  double VerticalSpeed = 0.05;
+  double HorizontalSpeed = 0.2;
+  double IndexerSpeed = 1;
 
   //placeholder variable for the goal hub's position on the field
   frc::Translation2d GoalPosition{4.612_m, 4.021_m};
@@ -109,6 +112,9 @@ class Robot : public frc::TimedRobot {
   rev::spark::SparkMax Indexer{10, rev::spark::SparkLowLevel::MotorType::kBrushless};
   rev::spark::SparkBaseConfig IndexerConfig{};
 
+
+  rev::spark::SparkMax Intake{11, rev::spark::SparkLowLevel::MotorType::kBrushless};
+  rev::spark::SparkBaseConfig IntakeConfig{};
   //intake CAN ID
   //rev::spark::SparkMax intake{30, rev::spark::SparkLowLevel::MotorType::kBrushless};
   
@@ -251,6 +257,11 @@ void RobotInit(){
   IndexerConfig.closedLoop
   .SetFeedbackSensor(rev::spark::FeedbackSensor::kPrimaryEncoder)
   .Pid(0.3, 0.0, 0.0)
+  .PositionWrappingEnabled(false);
+
+  IntakeConfig.closedLoop
+  .SetFeedbackSensor(rev::spark::FeedbackSensor::kPrimaryEncoder)
+  .Pid(0.3, 0.0, 0.0)
   .PositionWrappingEnabled(false)
   .OutputRange(-0.5, 0.5);
 
@@ -295,6 +306,8 @@ void RobotInit(){
   Indexer.Configure(IndexerConfig, rev::spark::SparkBase::ResetMode::kResetSafeParameters,
     rev::spark::SparkBase::PersistMode::kPersistParameters);
 
+  Intake.Configure(IntakeConfig,rev::spark::SparkBase::ResetMode::kResetSafeParameters,
+    rev::spark::SparkBase::PersistMode::kPersistParameters);
   //rotation motors need seeding to know what angle they start at
   //similar to the absolute encoders, the analog encoders also return the wheel's angle in ROTATIONS
   //we want RADIANS!!!
@@ -406,16 +419,16 @@ void TeleopPeriodic() {
   //Sets turret position to zero, and limtis rotational movement.
   if (controller.GetPOV() == 90) {
     //right
-    HorizontalTurret.Set(0.2);
+    HorizontalTurret.Set(HorizontalSpeed);
   } else if (controller.GetPOV() == 270){
     //left
-    HorizontalTurret.Set(-0.2);
+    HorizontalTurret.Set(-HorizontalSpeed);
   } else if (controller.GetPOV() == 180){
     //down
-    VerticalTurret.Set(-0.05);
+    VerticalTurret.Set(-VerticalSpeed);
   } else if (controller.GetPOV() == 0){
     //up
-    VerticalTurret.Set(0.05);
+    VerticalTurret.Set(VerticalSpeed);
   } else if (controller.GetStartButton()) {
     HorizontalTurret.GetEncoder().SetPosition(0);
   } else {
@@ -439,7 +452,7 @@ void TeleopPeriodic() {
 
 
   //shooter code
-  double targetrpm = 4000;
+  double targetrpm = 6000;
 
   //if bumper is pressed, fire both motors at the target rpm, otherwise set their velocities to 0
   if(controller.GetRightBumper()){
@@ -453,15 +466,22 @@ void TeleopPeriodic() {
   
 
 
-  //trigger
+  //controller triggers set indexer velocity
   if(controller.GetLeftTriggerAxis()){
-    Indexer.Set(-0.3);
+    Indexer.Set(-IndexerSpeed);
   } else if (controller.GetRightTriggerAxis()){
-    Indexer.Set(0.3);
+    Indexer.Set(IndexerSpeed);
   } else {
     Indexer.StopMotor();
   }
-  
+
+
+    //controller triggers set indexer velocity
+  if(controller.GetLeftBumper()){
+   Intake.Set(-0.7);
+  } else {
+    Intake.StopMotor();
+  }
 
 
 
