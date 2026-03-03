@@ -516,7 +516,10 @@ void AlignTurret(){
 
 //SetState takes in optimal state, and both drive and steer spark motor controller objects
 void SetState(frc::SwerveModuleState optState, rev::spark::SparkMax& driveSpark, rev::spark::SparkMax& steerSpark){
-
+  if (units::math::abs(optState.speed) < 0.1_mps) {
+     driveSpark.StopMotor();
+     return; 
+  }
   /* The driver sparks PID controller gets the speed value from optState, and then does 
   its own internal calculations to achieve that value.
   Basically the spark looks at it's own encoder to get it's current velocity,
