@@ -581,7 +581,7 @@ void Drive(double x, double y, double rotate){
     //uses the slewrate limiter to determine necessary chassis speeds
     limitx.Calculate(speedx),
     limity.Calculate(speedy),
-    limitrot.Calculate(rad * 1.2),  // sensitivity multiplier?? increase if rotation is sluggish, decrease if jittery
+    rad,  // sensitivity multiplier?? increase if rotation is sluggish, decrease if jittery
     rot2d  // This is what enables field-oriented control
   );
 
