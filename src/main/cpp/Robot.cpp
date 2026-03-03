@@ -196,7 +196,7 @@ void RobotInit(){
 
   steerConfig.closedLoop
     .SetFeedbackSensor(rev::spark::FeedbackSensor::kPrimaryEncoder)
-    .Pid(0.1, 0, 0.01)
+    .Pid(0.05, 0, 0.02)
     .PositionWrappingEnabled(true)
     .PositionWrappingInputRange(-PI, PI)
     .IZone(4000);
