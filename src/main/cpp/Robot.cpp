@@ -318,7 +318,7 @@ void RobotInit(){
   double floff = 0.5;
   double froff = 0.14;
   double bloff = -0.1;
-  double broff = -0.06; //.4
+  double broff = -0.085;
 
   rotfl.GetEncoder().SetPosition((encfl.Get() + floff) * 2.0 * PI);
   rotfr.GetEncoder().SetPosition((encfr.Get() + froff) * 2.0 * PI);
@@ -547,9 +547,9 @@ void Drive(double x, double y, double rotate){
   input IF the joystick values are negligible
   */
 
-  x = frc::ApplyDeadband(x, 0.2);
-  y = frc::ApplyDeadband(y, 0.2);
-  rotate = frc::ApplyDeadband(rotate, 0.2);
+  x = frc::ApplyDeadband(x, 0.25);
+  y = frc::ApplyDeadband(y, 0.25);
+  rotate = frc::ApplyDeadband(rotate, 0.25);
 
   
   //rot2d reflects the AHRS gyroscope orientation
