@@ -198,7 +198,7 @@ void RobotInit(){
     .SetFeedbackSensor(rev::spark::FeedbackSensor::kPrimaryEncoder)
     .Pid(0.05, 0, 0.02)
     .PositionWrappingEnabled(true)
-    .PositionWrappingInputRange(-PI, PI)
+    .PositionWrappingInputRange(-PI/2, PI/2)
     .IZone(4000);
 
 
@@ -320,6 +320,7 @@ void RobotInit(){
   double bloff = -0.1;
   double broff = -0.085;
 
+  frc::AngleModulate(units::radian_t{rawPos}).value()
   rotfl.GetEncoder().SetPosition((encfl.Get() + floff) * 2.0 * PI);
   rotfr.GetEncoder().SetPosition((encfr.Get() + froff) * 2.0 * PI);
   rotbl.GetEncoder().SetPosition((encbl.Get() + bloff) * 2.0 * PI);
