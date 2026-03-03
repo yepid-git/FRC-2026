@@ -196,10 +196,10 @@ void RobotInit(){
 
   steerConfig.closedLoop
     .SetFeedbackSensor(rev::spark::FeedbackSensor::kPrimaryEncoder)
-    .Pid(0.05, 0, 0.02)
+    .Pid(0.5, 0, 0.02)
     .PositionWrappingEnabled(true)
-    .PositionWrappingInputRange(-PI/2, PI/2)
-    .IZone(4000);
+    .PositionWrappingInputRange(-PI, PI)
+    .IZone(0.1);
 
 
   //leader shooter config 
