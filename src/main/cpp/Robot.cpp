@@ -197,7 +197,7 @@ void RobotInit(){
   steerConfig.closedLoop
     .SetFeedbackSensor(rev::spark::FeedbackSensor::kPrimaryEncoder)
     .Pid(0.1, 0, 0.01)
-    .PositionWrappingEnabled(true)
+    .PositionWrappingEnabled(false)
     .PositionWrappingInputRange(-PI, PI)
     .IZone(4000);
 
@@ -315,10 +315,10 @@ void RobotInit(){
 
   //when finding offset values, if offset is less than or equal to 0.5, keep it positive as is
   //if offset is negative, set it equal to -(1-offset) 
-  double floff = 0.02;
-  double froff = -0.36;
+  double floff = 0.5;
+  double froff = 0.14;
   double bloff = -0.1;
-  double broff = -0.49;
+  double broff = -0.06; //.4
 
   rotfl.GetEncoder().SetPosition((encfl.Get() + floff) * 2.0 * PI);
   rotfr.GetEncoder().SetPosition((encfr.Get() + froff) * 2.0 * PI);
