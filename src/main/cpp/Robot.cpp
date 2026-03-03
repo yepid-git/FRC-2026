@@ -197,7 +197,7 @@ void RobotInit(){
   steerConfig.closedLoop
     .SetFeedbackSensor(rev::spark::FeedbackSensor::kPrimaryEncoder)
     .Pid(0.1, 0, 0.01)
-    .PositionWrappingEnabled(false)
+    .PositionWrappingEnabled(true)
     .PositionWrappingInputRange(-PI, PI)
     .IZone(4000);
 
@@ -371,6 +371,7 @@ void RobotInit(){
 
 void RobotPeriodic() {
 
+  
   UpdatePose();
 
   //every 20ms, robot receives new data from limelight
@@ -397,6 +398,10 @@ void AutonomousInit() {
 }
 
 void AutonomousPeriodic() {
+  frc::SmartDashboard::PutNumber("encfl.Get", encfl.Get());
+  frc::SmartDashboard::PutNumber("encfr.Get", encfr.Get());
+  frc::SmartDashboard::PutNumber("encbl.Get", encbl.Get());
+  frc::SmartDashboard::PutNumber("encbr.Get", encbr.Get());
 
 }
 
