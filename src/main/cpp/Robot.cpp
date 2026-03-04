@@ -196,11 +196,10 @@ void RobotInit(){
 
   steerConfig.closedLoop
     .SetFeedbackSensor(rev::spark::FeedbackSensor::kPrimaryEncoder)
-    .Pid(0.5, 0, 0.02)
+    .Pid(0.4, 0, 0.02)
     .PositionWrappingEnabled(true)
     .PositionWrappingInputRange(-PI, PI)
     .IZone(0.1);
-
 
   //leader shooter config 
   shooterLeaderConfig
@@ -374,6 +373,14 @@ void RobotPeriodic() {
 
   
   UpdatePose();
+  frc::Pose2d position = odometry->GetPose();
+  double yposition = position.Y().value();
+  double xposition = position.X().value();
+  double heading = position.Rotation().Degrees().value();
+  frc::SmartDashboard::PutNumber("y position: ", yposition);
+  frc::SmartDashboard::PutNumber("x position: ", xposition);
+  frc::SmartDashboard::PutNumber("angle: ", heading);
+
 
   //every 20ms, robot receives new data from limelight
   //currently not important for purposes of drive testing, but it will be in auto
