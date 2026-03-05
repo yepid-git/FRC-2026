@@ -377,6 +377,9 @@ void RobotPeriodic() {
   frc::SmartDashboard::PutNumber("x position: ", xposition);
   frc::SmartDashboard::PutNumber("angle: ", heading);
 
+    frc::SmartDashboard::PutNumber("Raw Yaw", ahrs->GetYaw());
+  frc::SmartDashboard::PutNumber("Raw Angle", ahrs->GetAngle());
+  
   frc::SmartDashboard::PutNumber("encfl.Get", encfl.Get());
   frc::SmartDashboard::PutNumber("encfr.Get", encfr.Get());
   frc::SmartDashboard::PutNumber("encbl.Get", encbl.Get());
@@ -573,8 +576,6 @@ void Drive(double x, double y, double rotate){
   frc::SmartDashboard::PutNumber("encfr.Get", encfr.Get());
   frc::SmartDashboard::PutNumber("encbl.Get", encbl.Get());
   frc::SmartDashboard::PutNumber("encbr.Get", encbr.Get());
-  frc::SmartDashboard::PutNumber("Raw Yaw", ahrs->GetYaw());
-  frc::SmartDashboard::PutNumber("Raw Angle", ahrs->GetAngle());
 
   //this is where joystick percentages become velocity!
   //max speeds become 1 x factor units / sec
