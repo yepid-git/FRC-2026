@@ -352,7 +352,7 @@ void RobotInit(){
   //tracks robot position on field by using the motor encoders
   odometry = std::make_unique<frc::SwerveDriveOdometry<4>>(
     kinematics,
-    ahrs->GetRotation2d(),
+    frc::Rotation2d{units::degree_t{-ahrs->GetYaw()}},
     GetSwervePositions(),
     frc::Pose2d{0_m, 0_m, 0_rad}
   );
@@ -655,7 +655,7 @@ void ResetGyro() {
 //reset odometry
 void ResetOdometry() {
   odometry->ResetPosition(
-  ahrs->GetRotation2d(), 
+  frc::Rotation2d{units::degree_t{-ahrs->GetYaw()}}, 
   GetSwervePositions(),
   frc::Pose2d{0_m, 0_m, 0_rad}
   );
@@ -665,7 +665,7 @@ void ResetOdometry() {
 //helper function to update pose
 void UpdatePose(){
   pose = odometry->Update(
-    ahrs->GetRotation2d(),
+    frc::Rotation2d{units::degree_t{-ahrs->GetYaw()}},
     GetSwervePositions()
   );
 
