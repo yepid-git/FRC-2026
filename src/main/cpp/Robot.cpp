@@ -283,10 +283,6 @@ void RobotInit(){
   rotbr.Configure(steerConfig, rev::spark::SparkMax::ResetMode::kResetSafeParameters,
     rev::spark::SparkMax::PersistMode::kPersistParameters); 
 
-  wheelfl.GetEncoder().SetPosition(0);
-  wheelfr.GetEncoder().SetPosition(0);
-  wheelbl.GetEncoder().SetPosition(0);
-  wheelbr.GetEncoder().SetPosition(0);
 
 
   //shooter configs
@@ -380,6 +376,11 @@ void RobotPeriodic() {
   frc::SmartDashboard::PutNumber("y position: ", yposition);
   frc::SmartDashboard::PutNumber("x position: ", xposition);
   frc::SmartDashboard::PutNumber("angle: ", heading);
+
+  frc::SmartDashboard::PutNumber("encfl.Get", encfl.Get());
+  frc::SmartDashboard::PutNumber("encfr.Get", encfr.Get());
+  frc::SmartDashboard::PutNumber("encbl.Get", encbl.Get());
+  frc::SmartDashboard::PutNumber("encbr.Get", encbr.Get());
 
 
   //every 20ms, robot receives new data from limelight
