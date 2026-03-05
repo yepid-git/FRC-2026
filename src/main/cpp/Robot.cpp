@@ -710,10 +710,10 @@ wpi::array<frc::SwerveModulePosition, 4> GetSwervePositions(){
 
 void xstop(){
   //just tells the robot which angle to set everything to in order to make an x :)
-  pidfl.SetReference(3*PI/4,  rev::spark::SparkBase::ControlType::kVelocity);
-  pidfr.SetReference(PI/4,  rev::spark::SparkBase::ControlType::kVelocity);
-  pidbl.SetReference(PI/4,  rev::spark::SparkBase::ControlType::kVelocity);
-  pidbr.SetReference(3*PI/4,  rev::spark::SparkBase::ControlType::kVelocity);
+  pidfl.SetReference(3*PI/4,  rev::spark::SparkBase::ControlType::kPosition);
+  pidfr.SetReference(PI/4,  rev::spark::SparkBase::ControlType::kPosition);
+  pidbl.SetReference(PI/4,  rev::spark::SparkBase::ControlType::kPosition);
+  pidbr.SetReference(3*PI/4,  rev::spark::SparkBase::ControlType::kPosition);
 }
 
 
