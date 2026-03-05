@@ -562,7 +562,7 @@ void Drive(double x, double y, double rotate){
 
   
   //rot2d reflects the AHRS gyroscope orientation
-  frc::Rotation2d rot2d = ahrs->GetRotation2d();
+  frc::Rotation2d rot2d{units::degree_t{-ahrs->GetYaw()}};
 
   //bunch of debugging utilities
   frc::SmartDashboard::PutNumber("Drive:x", x);
