@@ -352,7 +352,7 @@ void RobotInit(){
   //tracks robot position on field by using the motor encoders
   odometry = std::make_unique<frc::SwerveDriveOdometry<4>>(
     kinematics,
-    frc::Rotation2d{units::degree_t{-ahrs->GetYaw()}},
+    frc::Rotation2d{units::degree_t{ahrs->GetYaw()}},
     GetSwervePositions(),
     frc::Pose2d{0_m, 0_m, 0_rad}
   );
@@ -377,9 +377,9 @@ void RobotPeriodic() {
   frc::SmartDashboard::PutNumber("x position: ", xposition);
   frc::SmartDashboard::PutNumber("angle: ", heading);
 
-    frc::SmartDashboard::PutNumber("Raw Yaw", ahrs->GetYaw());
+  frc::SmartDashboard::PutNumber("Raw Yaw", ahrs->GetYaw());
   frc::SmartDashboard::PutNumber("Raw Angle", ahrs->GetAngle());
-  
+
   frc::SmartDashboard::PutNumber("encfl.Get", encfl.Get());
   frc::SmartDashboard::PutNumber("encfr.Get", encfr.Get());
   frc::SmartDashboard::PutNumber("encbl.Get", encbl.Get());
@@ -565,7 +565,7 @@ void Drive(double x, double y, double rotate){
 
   
   //rot2d reflects the AHRS gyroscope orientation
-  frc::Rotation2d rot2d{units::degree_t{360.0 - ahrs->GetAngle()}};
+  frc::Rotation2d rot2d{units::degree_t{ahrs->GetAngle()}};
 
   //bunch of debugging utilities
   frc::SmartDashboard::PutNumber("Drive:x", x);
@@ -657,7 +657,7 @@ void ResetGyro() {
 //reset odometry
 void ResetOdometry() {
   odometry->ResetPosition(
-  frc::Rotation2d{units::degree_t{-ahrs->GetYaw()}}, 
+  frc::Rotation2d{units::degree_t{ahrs->GetYaw()}}, 
   GetSwervePositions(),
   frc::Pose2d{0_m, 0_m, 0_rad}
   );
@@ -667,7 +667,7 @@ void ResetOdometry() {
 //helper function to update pose
 void UpdatePose(){
   pose = odometry->Update(
-    frc::Rotation2d{units::degree_t{-ahrs->GetYaw()}},
+    frc::Rotation2d{units::degree_t{ahrs->GetYaw()}},
     GetSwervePositions()
   );
 
