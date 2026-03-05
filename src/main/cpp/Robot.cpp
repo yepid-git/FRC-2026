@@ -313,7 +313,7 @@ void RobotInit(){
   double floff = 0.5;
   double froff = 0.14;
   double bloff = -0.1;
-  double broff = -0.085;
+  double broff = 0;
 
 
   rotfl.GetEncoder().SetPosition((encfl.Get() + floff) * 2.0 * PI);
