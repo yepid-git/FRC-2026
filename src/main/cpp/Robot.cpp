@@ -459,13 +459,19 @@ void TeleopPeriodic() {
   }
 
 
-  if(controller.GetXButton()){
-    VerticalTurret.StopMotor();
-  }
+  if (controller.GetXButton()){
+    xstop();
+    pidfl.SetIAccum(0);
+    pidfr.SetIAccum(0);
+    pidbl.SetIAccum(0);
+    pidbr.SetIAccum(0);
+  } else { //if else structure makes it so drive and x-stop are mutually exclusive
   //x, y, turn
   //for now, just calling drive on it's own
   //joysticks are inverted because wpi NWU axes co-ordinate system is weird, search it up if interested
   Drive(-controller.GetLeftY(), -controller.GetLeftX(), -controller.GetRightX());
+  }
+
 
 
   //shooter code
@@ -701,6 +707,14 @@ wpi::array<frc::SwerveModulePosition, 4> GetSwervePositions(){
 
 }
 
+
+void xstop(){
+  //just tells the robot which angle to set everything to in order to make an x :)
+  pidfl.SetReference(3*PI/4,  rev::spark::SparkBase::ControlType::kVelocity);
+  pidfr.SetReference(PI/4,  rev::spark::SparkBase::ControlType::kVelocity);
+  pidbl.SetReference(PI/4,  rev::spark::SparkBase::ControlType::kVelocity);
+  pidbr.SetReference(3*PI/4,  rev::spark::SparkBase::ControlType::kVelocity);
+}
 
 
 };
