@@ -562,7 +562,7 @@ void Drive(double x, double y, double rotate){
 
   
   //rot2d reflects the AHRS gyroscope orientation
-  frc::Rotation2d rot2d{units::degree_t{-ahrs->GetYaw()}};
+  frc::Rotation2d rot2d{units::degree_t{360.0 - ahrs->GetAngle()}};
 
   //bunch of debugging utilities
   frc::SmartDashboard::PutNumber("Drive:x", x);
@@ -573,7 +573,8 @@ void Drive(double x, double y, double rotate){
   frc::SmartDashboard::PutNumber("encfr.Get", encfr.Get());
   frc::SmartDashboard::PutNumber("encbl.Get", encbl.Get());
   frc::SmartDashboard::PutNumber("encbr.Get", encbr.Get());
-
+  frc::SmartDashboard::PutNumber("Raw Yaw", ahrs->GetYaw());
+  frc::SmartDashboard::PutNumber("Raw Angle", ahrs->GetAngle());
 
   //this is where joystick percentages become velocity!
   //max speeds become 1 x factor units / sec
