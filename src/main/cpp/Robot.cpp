@@ -443,6 +443,7 @@ void TeleopPeriodic() {
 
   if(controller.GetAButton()){
     VerticalTurret.GetEncoder().SetPosition(0);
+    HorizontalTurret.GetEncoder().SetPosition(0);
   }
 
 
