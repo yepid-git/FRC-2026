@@ -78,14 +78,23 @@ class Robot : public frc::TimedRobot {
   // The constructor parameter is the "analog input channel" to use, corresponding to
   // the RoboRIO AnalogIn pins.
   // These analog encoders, when .Get() is used, provide the angle in ROTATIONS (0 to 1.0) 
+  //additionally, initializes a closed loop controller for each rotational motor for Xstop to function
+
   rev::spark::SparkMax rotfl{2, rev::spark::SparkLowLevel::MotorType::kBrushless};
   frc::AnalogEncoder encfl{3};
+  rev::spark::SparkClosedLoopController pidrotfl = rotfl.GetClosedLoopController();
+
   rev::spark::SparkMax rotfr{6, rev::spark::SparkLowLevel::MotorType::kBrushless};
   frc::AnalogEncoder encfr{2};
+  rev::spark::SparkClosedLoopController pidrotfr = rotfr.GetClosedLoopController();
+
   rev::spark::SparkMax rotbl{4, rev::spark::SparkLowLevel::MotorType::kBrushless};
   frc::AnalogEncoder encbl{0};
+  rev::spark::SparkClosedLoopController pidrotbl = rotbl.GetClosedLoopController();
+
   rev::spark::SparkMax rotbr{8, rev::spark::SparkLowLevel::MotorType::kBrushless};
   frc::AnalogEncoder encbr{1};
+  rev::spark::SparkClosedLoopController pidrotbr = rotbr.GetClosedLoopController();
 
 
   //shooter CAN ID's  
@@ -432,6 +441,10 @@ void TeleopPeriodic() {
     ResetGyro();
   }
 
+  if(controller.GetAButton()){
+    VerticalTurret.GetEncoder().SetPosition(0);
+  }
+
 
   //Sets turret position to zero, and limtis rotational movement.
   if (controller.GetPOV() == 90) {
@@ -710,10 +723,16 @@ wpi::array<frc::SwerveModulePosition, 4> GetSwervePositions(){
 
 void xstop(){
   //just tells the robot which angle to set everything to in order to make an x :)
-  pidfl.SetReference(3*PI/4,  rev::spark::SparkBase::ControlType::kPosition);
-  pidfr.SetReference(PI/4,  rev::spark::SparkBase::ControlType::kPosition);
-  pidbl.SetReference(PI/4,  rev::spark::SparkBase::ControlType::kPosition);
-  pidbr.SetReference(3*PI/4,  rev::spark::SparkBase::ControlType::kPosition);
+  pidrotfl.SetReference(PI/4,  rev::spark::SparkBase::ControlType::kPosition);
+  pidrotfr.SetReference(-PI/4,  rev::spark::SparkBase::ControlType::kPosition);
+  pidrotbl.SetReference(-PI/4,  rev::spark::SparkBase::ControlType::kPosition);
+  pidrotbr.SetReference(PI/4,  rev::spark::SparkBase::ControlType::kPosition);
+
+  //tells robot to hold a velocity of 0 on all motors
+  pidfl.SetReference(0, rev::spark::SparkBase::ControlType::kVelocity);
+  pidfr.SetReference(0, rev::spark::SparkBase::ControlType::kVelocity);
+  pidbl.SetReference(0, rev::spark::SparkBase::ControlType::kVelocity);
+  pidbr.SetReference(0, rev::spark::SparkBase::ControlType::kVelocity);
 }
 
 
