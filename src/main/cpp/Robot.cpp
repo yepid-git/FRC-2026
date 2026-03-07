@@ -234,7 +234,7 @@ void RobotInit(){
   //configs for the turret's rotational motors
   HorizontalTurretConfig.encoder
     .PositionConversionFactor((2.0 * PI) / 50) // 50:1 Gearbox ratio
-    .VelocityConversionFactor(((2.0 * PI) / 50 / 60.0);
+    .VelocityConversionFactor(((2.0 * PI) / 50 / 60.0));
 
   HorizontalTurretConfig.closedLoop
   .SetFeedbackSensor(rev::spark::FeedbackSensor::kPrimaryEncoder)
@@ -261,8 +261,8 @@ void RobotInit(){
     .OutputRange(-0.1, 0.1);
 
   VerticalTurretConfig.encoder
-    .PositionConversionFactor((2.0 * PI) / 36) // 36:1 Gearbox ratio
-    .VelocityConversionFactor(((2.0 * PI) / 36) / 60.0);
+    .PositionConversionFactor((2.0 * PI) / 36 * 4) // 36:1 Gearbox ratio
+    .VelocityConversionFactor(((2.0 * PI) / 36 * 4) / 60.0);
 
   
   IndexerConfig.closedLoop
@@ -498,7 +498,7 @@ void TeleopPeriodic() {
 
 
   //shooter code
-  double targetrpm = 6000;
+  double targetrpm = 6368;
 
   //if bumper is pressed, fire both motors at the target rpm, otherwise set their velocities to 0
   if(controller.GetRightBumper()){
