@@ -439,14 +439,7 @@ void TeleopPeriodic() {
     ResetGyro();
   }
 
-  if(controller.GetBButton()){
-    AlignTurret();
-  } else {
-    VerticalTurret.StopMotor();
-    HorizontalTurret.StopMotor();
-  }
-
-  if(controller.GetAButtonPressed()){
+  if(controller.GetBButtonPressed()){
     VerticalTurret.GetEncoder().SetPosition(0);
     HorizontalTurret.GetEncoder().SetPosition(0);
   }
@@ -498,10 +491,10 @@ void TeleopPeriodic() {
 
   //if bumper is pressed, fire both motors at the target rpm, otherwise set their velocities to 0
   if(controller.GetRightBumper()){
-    pidfiresh.SetReference(
+  firesh.GetClosedLoopController().SetReference(
       targetrpm,
       rev::spark::SparkBase::ControlType::kVelocity
-    );
+  );
   } else {
     firesh.StopMotor();
   }
