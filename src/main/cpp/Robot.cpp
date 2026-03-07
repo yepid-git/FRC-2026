@@ -233,8 +233,8 @@ void RobotInit(){
 
   //configs for the turret's rotational motors
   HorizontalTurretConfig.encoder
-    .PositionConversionFactor((2.0 * PI) / 50.0) // 50:1 Gearbox ratio
-    .VelocityConversionFactor(((2.0 * PI) / 50.0) / 60.0);
+    .PositionConversionFactor((2.0 * PI) / 50) // 50:1 Gearbox ratio
+    .VelocityConversionFactor(((2.0 * PI) / 50 / 60.0);
 
   HorizontalTurretConfig.closedLoop
   .SetFeedbackSensor(rev::spark::FeedbackSensor::kPrimaryEncoder)
@@ -260,6 +260,9 @@ void RobotInit(){
     .PositionWrappingEnabled(false)
     .OutputRange(-0.1, 0.1);
 
+  VerticalTurretConfig.encoder
+    .PositionConversionFactor((2.0 * PI) / 36) // 36:1 Gearbox ratio
+    .VelocityConversionFactor(((2.0 * PI) / 36) / 60.0);
 
   
   IndexerConfig.closedLoop
