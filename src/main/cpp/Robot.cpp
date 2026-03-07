@@ -383,8 +383,8 @@ void RobotPeriodic() {
   frc::SmartDashboard::PutNumber("x position: ", xposition);
   frc::SmartDashboard::PutNumber("angle: ", heading);
 
-  frc::SmartDashboard::PutNumber("Raw Yaw", ahrs->GetYaw());
-  frc::SmartDashboard::PutNumber("Raw Angle", ahrs->GetAngle());
+  frc::SmartDashboard::PutNumber("Raw Yaw: ", ahrs->GetYaw());
+  frc::SmartDashboard::PutNumber("Raw Angle: ", ahrs->GetAngle());
 
   frc::SmartDashboard::PutNumber("encfl.Get", encfl.Get());
   frc::SmartDashboard::PutNumber("encfr.Get", encfr.Get());
@@ -392,7 +392,10 @@ void RobotPeriodic() {
   frc::SmartDashboard::PutNumber("encbr.Get", encbr.Get());
 
   frc::SmartDashboard::PutNumber("Turret Heading (radians): ", HorizontalTurret.GetEncoder().GetPosition());
+  frc::SmartDashboard::PutNumber("POV: ", controller.GetPOV());
 
+  frc::SmartDashboard::PutBoolean("NavX Connected", ahrs->IsConnected());
+  frc::SmartDashboard::PutBoolean("NavX Calibrating", ahrs->IsCalibrating());
   //every 20ms, robot receives new data from limelight
   //currently not important for purposes of drive testing, but it will be in auto
   /*
@@ -417,11 +420,6 @@ void AutonomousInit() {
 }
 
 void AutonomousPeriodic() {
-  frc::SmartDashboard::PutNumber("encfl.Get", encfl.Get());
-  frc::SmartDashboard::PutNumber("encfr.Get", encfr.Get());
-  frc::SmartDashboard::PutNumber("encbl.Get", encbl.Get());
-  frc::SmartDashboard::PutNumber("encbr.Get", encbr.Get());
-
 }
 
 void TeleopInit() {
@@ -668,7 +666,6 @@ void SimulationPeriodic() {}
 //resets the gyroscope
 void ResetGyro() {
   ahrs->ZeroYaw();
-  ResetOdometry();
 }
 
 //reset odometry
