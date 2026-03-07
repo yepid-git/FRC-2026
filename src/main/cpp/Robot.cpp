@@ -97,8 +97,8 @@ class Robot : public frc::TimedRobot {
 
 
   //shooter CAN ID's  
-  rev::spark::SparkFlex firesh{21, rev::spark::SparkLowLevel::MotorType::kBrushless}; //Leader motor
-  rev::spark::SparkFlex firesh2{20, rev::spark::SparkLowLevel::MotorType::kBrushless}; //Follower motor
+  rev::spark::SparkFlex firesh{20, rev::spark::SparkLowLevel::MotorType::kBrushless}; //Leader motor
+  rev::spark::SparkFlex firesh2{21, rev::spark::SparkLowLevel::MotorType::kBrushless}; //Follower motor
 
   rev::spark::SparkClosedLoopController pidfiresh = firesh.GetClosedLoopController();
 
