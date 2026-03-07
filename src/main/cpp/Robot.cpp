@@ -442,6 +442,13 @@ void TeleopPeriodic() {
     ResetGyro();
   }
 
+  if(controller.GetBButton()){
+    AlignTurret();
+  } else {
+    VerticalTurret.StopMotor();
+    HorizontalTurret.StopMotor();
+  }
+
   if(controller.GetAButton()){
     VerticalTurret.GetEncoder().SetPosition(0);
     HorizontalTurret.GetEncoder().SetPosition(0);
