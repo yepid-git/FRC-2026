@@ -134,7 +134,7 @@ class Robot : public frc::TimedRobot {
   frc::BuiltInAccelerometer acc;
 
   //AHRS: attitude and heading reference system
-  studica::AHRS *ahrs = new studica::AHRS(studica::AHRS::NavXComType::kUSB1);
+  studica::AHRS *ahrs = new studica::AHRS(studica::AHRS::NavXComType::kUSB2);
 
   //kinematics object
   frc::SwerveDriveKinematics<4> kinematics{
