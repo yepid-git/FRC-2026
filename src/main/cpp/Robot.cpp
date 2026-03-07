@@ -58,13 +58,13 @@ class Robot : public frc::TimedRobot {
 
   //sets CAN ID's for the drive wheels
   rev::spark::SparkMax wheelfl{1, rev::spark::SparkLowLevel::MotorType::kBrushless};
-  rev::spark::SparkClosedLoopController pidfl = wheelfl.GetClosedLoopController();
+
   rev::spark::SparkMax wheelfr{5, rev::spark::SparkLowLevel::MotorType::kBrushless};
-  rev::spark::SparkClosedLoopController pidfr = wheelfr.GetClosedLoopController();
+
   rev::spark::SparkMax wheelbl{3, rev::spark::SparkLowLevel::MotorType::kBrushless};
-  rev::spark::SparkClosedLoopController pidbl = wheelbl.GetClosedLoopController();
+
   rev::spark::SparkMax wheelbr{7, rev::spark::SparkLowLevel::MotorType::kBrushless};
-  rev::spark::SparkClosedLoopController pidbr = wheelbr.GetClosedLoopController();
+
 
   // Configuration objects for PID control of motors via SparkMax's
   rev::spark::SparkBaseConfig driveConfig{};
@@ -82,24 +82,23 @@ class Robot : public frc::TimedRobot {
 
   rev::spark::SparkMax rotfl{2, rev::spark::SparkLowLevel::MotorType::kBrushless};
   frc::AnalogEncoder encfl{3};
-  rev::spark::SparkClosedLoopController pidrotfl = rotfl.GetClosedLoopController();
 
   rev::spark::SparkMax rotfr{6, rev::spark::SparkLowLevel::MotorType::kBrushless};
   frc::AnalogEncoder encfr{2};
-  rev::spark::SparkClosedLoopController pidrotfr = rotfr.GetClosedLoopController();
+
 
   rev::spark::SparkMax rotbl{4, rev::spark::SparkLowLevel::MotorType::kBrushless};
   frc::AnalogEncoder encbl{0};
-  rev::spark::SparkClosedLoopController pidrotbl = rotbl.GetClosedLoopController();
+
 
   rev::spark::SparkMax rotbr{8, rev::spark::SparkLowLevel::MotorType::kBrushless};
   frc::AnalogEncoder encbr{1};
-  rev::spark::SparkClosedLoopController pidrotbr = rotbr.GetClosedLoopController();
+
 
 
   //shooter CAN ID's  
-  rev::spark::SparkFlex firesh{20, rev::spark::SparkLowLevel::MotorType::kBrushless}; //Leader motor
-  rev::spark::SparkFlex firesh2{21, rev::spark::SparkLowLevel::MotorType::kBrushless}; //Follower motor
+  rev::spark::SparkFlex firesh{21, rev::spark::SparkLowLevel::MotorType::kBrushless}; //Leader motor
+  rev::spark::SparkFlex firesh2{20, rev::spark::SparkLowLevel::MotorType::kBrushless}; //Follower motor
 
   rev::spark::SparkClosedLoopController pidfiresh = firesh.GetClosedLoopController();
 
@@ -481,10 +480,10 @@ void TeleopPeriodic() {
 
   if (controller.GetXButton()){
     xstop();
-    pidfl.SetIAccum(0);
-    pidfr.SetIAccum(0);
-    pidbl.SetIAccum(0);
-    pidbr.SetIAccum(0);
+    wheelfl.GetClosedLoopController().SetIAccum(0);
+    wheelfr.GetClosedLoopController().SetIAccum(0);
+    wheelbl.GetClosedLoopController().SetIAccum(0);
+    wheelfr.GetClosedLoopController().SetIAccum(0);
   } else { //if else structure makes it so drive and x-stop are mutually exclusive
   //x, y, turn
   //for now, just calling drive on it's own
@@ -729,16 +728,19 @@ wpi::array<frc::SwerveModulePosition, 4> GetSwervePositions(){
 
 void xstop(){
   //just tells the robot which angle to set everything to in order to make an x :)
-  pidrotfl.SetReference(PI/4,  rev::spark::SparkBase::ControlType::kPosition);
-  pidrotfr.SetReference(-PI/4,  rev::spark::SparkBase::ControlType::kPosition);
-  pidrotbl.SetReference(-PI/4,  rev::spark::SparkBase::ControlType::kPosition);
-  pidrotbr.SetReference(PI/4,  rev::spark::SparkBase::ControlType::kPosition);
+  rotfl.GetClosedLoopController().SetReference(PI/4,  rev::spark::SparkBase::ControlType::kPosition);
+  rotfr.GetClosedLoopController().SetReference(-PI/4, rev::spark::SparkBase::ControlType::kPosition);
+  rotbl.GetClosedLoopController().SetReference(-PI/4, rev::spark::SparkBase::ControlType::kPosition);
+  rotbr.GetClosedLoopController().SetReference(PI/4,  rev::spark::SparkBase::ControlType::kPosition);
 
   //tells robot to hold a velocity of 0 on all motors
-  pidfl.SetReference(0, rev::spark::SparkBase::ControlType::kVelocity);
-  pidfr.SetReference(0, rev::spark::SparkBase::ControlType::kVelocity);
-  pidbl.SetReference(0, rev::spark::SparkBase::ControlType::kVelocity);
-  pidbr.SetReference(0, rev::spark::SparkBase::ControlType::kVelocity);
+  wheelfl.GetClosedLoopController().SetReference(0, rev::spark::SparkBase::ControlType::kVelocity);
+  wheelfr.GetClosedLoopController().SetReference(0, rev::spark::SparkBase::ControlType::kVelocity);
+  wheelbl.GetClosedLoopController().SetReference(0, rev::spark::SparkBase::ControlType::kVelocity);
+  wheelbr.GetClosedLoopController().SetReference(0, rev::spark::SparkBase::ControlType::kVelocity);
+
+  //yes the repeated GetClosedLoopController() is ugly
+  //no you cannot store the closed loop controllers as variables
 }
 
 
