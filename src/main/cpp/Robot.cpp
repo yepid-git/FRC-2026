@@ -41,12 +41,12 @@ class Robot : public frc::TimedRobot {
   double ty;
   double ta;
 
-  double VerticalSpeed = 0.05;
-  double HorizontalSpeed = 0.2;
+  double VerticalSpeed = 0.1;
+  double HorizontalSpeed = 0.4;
   double IndexerSpeed = 1;
 
   //placeholder variable for the goal hub's position on the field
-  frc::Translation2d GoalPosition{4.612_m, 4.021_m};
+  frc::Translation2d GoalPosition{4.612_m, -4.021_m};
 
 
   //set location of each wheel relative to center (using WPILib's NWU axes coordinate system)
@@ -241,7 +241,7 @@ void RobotInit(){
   .Pid(0.2, 0.0, 0.0)
   .PositionWrappingEnabled(true)
   .PositionWrappingInputRange(-PI, PI)
-  .OutputRange(-0.2, 0.2);
+  .OutputRange(-0.4, 0.4);
 
   HorizontalTurretConfig.softLimit
     .ForwardSoftLimit(PI)  // 180 degrees
@@ -258,7 +258,7 @@ void RobotInit(){
     .SetFeedbackSensor(rev::spark::FeedbackSensor::kPrimaryEncoder)
     .Pid(0.2, 0.0, 0.0)
     .PositionWrappingEnabled(false)
-    .OutputRange(-0.05, 0.05);
+    .OutputRange(-0.1, 0.1);
 
 
   
@@ -383,7 +383,8 @@ void RobotPeriodic() {
   double heading = position.Rotation().Degrees().value();
   frc::SmartDashboard::PutNumber("y position: ", yposition);
   frc::SmartDashboard::PutNumber("x position: ", xposition);
-  frc::SmartDashboard::PutNumber("angle: ", heading);
+  frc::SmartDashboard::PutNumber("robot heading (degrees): ", heading);
+  frc::SmartDashboard::PutNumber("robot heading (radians)", heading * PI / 180);
 
   frc::SmartDashboard::PutNumber("Raw Yaw: ", ahrs->GetYaw());
   frc::SmartDashboard::PutNumber("Raw Angle: ", ahrs->GetAngle());
@@ -394,10 +395,17 @@ void RobotPeriodic() {
   frc::SmartDashboard::PutNumber("encbr.Get", encbr.Get());
 
   frc::SmartDashboard::PutNumber("Turret Heading (radians): ", HorizontalTurret.GetEncoder().GetPosition());
+  frc::SmartDashboard::PutNumber("Turret Angle (revs): ", VerticalTurret.GetEncoder().GetPosition());
   frc::SmartDashboard::PutNumber("POV: ", controller.GetPOV());
 
   frc::SmartDashboard::PutBoolean("NavX Connected", ahrs->IsConnected());
   frc::SmartDashboard::PutBoolean("NavX Calibrating", ahrs->IsCalibrating());
+
+  frc::Translation2d distance = GoalPosition - position.Translation();
+  frc::SmartDashboard::PutNumber("Distance from goal (x): ", distance.X().value());
+  frc::SmartDashboard::PutNumber("Distance from goal (y): ", distance.X().value());
+  frc::SmartDashboard::PutNumber("Distance from goal (overall): ", distance.Norm().value());
+
   //every 20ms, robot receives new data from limelight
   //currently not important for purposes of drive testing, but it will be in auto
   /*
@@ -440,7 +448,7 @@ void TeleopPeriodic() {
   }
 
   if(controller.GetBButtonPressed()){
-    VerticalTurret.GetEncoder().SetPosition(0);
+    VerticalTurret.GetEncoder().SetPosition(45);
     HorizontalTurret.GetEncoder().SetPosition(0);
   }
 
@@ -531,7 +539,7 @@ void AlignTurret(){
   //calculate angle based on the x & y distances
   frc::Rotation2d angle = distance.Angle();
 
-  frc::Rotation2d TurretTarget = pose.Rotation() - angle;;
+  frc::Rotation2d TurretTarget = angle - pose.Rotation();
 
   //Sets the rotational motor's angle, to that position
   HorizontalTurret.GetClosedLoopController().SetReference(
