@@ -58,13 +58,13 @@ class Robot : public frc::TimedRobot {
 
   //sets CAN ID's for the drive wheels
   rev::spark::SparkMax wheelfl{1, rev::spark::SparkLowLevel::MotorType::kBrushless};
-
+  rev::spark::SparkClosedLoopController pidfl = wheelfl.GetClosedLoopController();
   rev::spark::SparkMax wheelfr{5, rev::spark::SparkLowLevel::MotorType::kBrushless};
-
+  rev::spark::SparkClosedLoopController pidfr = wheelfr.GetClosedLoopController();
   rev::spark::SparkMax wheelbl{3, rev::spark::SparkLowLevel::MotorType::kBrushless};
-
+  rev::spark::SparkClosedLoopController pidbl = wheelbl.GetClosedLoopController();
   rev::spark::SparkMax wheelbr{7, rev::spark::SparkLowLevel::MotorType::kBrushless};
-
+  rev::spark::SparkClosedLoopController pidbr = wheelbr.GetClosedLoopController();
 
   // Configuration objects for PID control of motors via SparkMax's
   rev::spark::SparkBaseConfig driveConfig{};
@@ -391,7 +391,7 @@ void RobotPeriodic() {
   frc::SmartDashboard::PutNumber("encbl.Get", encbl.Get());
   frc::SmartDashboard::PutNumber("encbr.Get", encbr.Get());
 
-  frc::SmartDashboard::PutNumber("Turret Heading (radians): ", HorizontalTurret.GetEncoder().GetPosition())
+  frc::SmartDashboard::PutNumber("Turret Heading (radians): ", HorizontalTurret.GetEncoder().GetPosition());
 
   //every 20ms, robot receives new data from limelight
   //currently not important for purposes of drive testing, but it will be in auto
@@ -483,7 +483,7 @@ void TeleopPeriodic() {
     wheelfl.GetClosedLoopController().SetIAccum(0);
     wheelfr.GetClosedLoopController().SetIAccum(0);
     wheelbl.GetClosedLoopController().SetIAccum(0);
-    wheelfr.GetClosedLoopController().SetIAccum(0);
+    wheelbr.GetClosedLoopController().SetIAccum(0);
   } else { //if else structure makes it so drive and x-stop are mutually exclusive
   //x, y, turn
   //for now, just calling drive on it's own
