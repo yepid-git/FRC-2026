@@ -403,7 +403,7 @@ void RobotPeriodic() {
 
   frc::Translation2d distance = GoalPosition - position.Translation();
   frc::SmartDashboard::PutNumber("Distance from goal (x): ", distance.X().value());
-  frc::SmartDashboard::PutNumber("Distance from goal (y): ", distance.X().value());
+  frc::SmartDashboard::PutNumber("Distance from goal (y): ", distance.Y().value());
   frc::SmartDashboard::PutNumber("Distance from goal (overall): ", distance.Norm().value());
 
   //every 20ms, robot receives new data from limelight
