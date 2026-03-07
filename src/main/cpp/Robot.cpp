@@ -367,8 +367,6 @@ void RobotInit(){
   );
 
   pose = odometry->GetPose();
-  ResetGyro();
-
 
 }
 
@@ -388,6 +386,11 @@ void RobotPeriodic() {
 
   frc::SmartDashboard::PutNumber("Raw Yaw", ahrs->GetYaw());
   frc::SmartDashboard::PutNumber("Raw Angle", ahrs->GetAngle());
+
+  frc::SmartDashboard::PutNumber("encfl.Get", encfl.Get());
+  frc::SmartDashboard::PutNumber("encfr.Get", encfr.Get());
+  frc::SmartDashboard::PutNumber("encbl.Get", encbl.Get());
+  frc::SmartDashboard::PutNumber("encbr.Get", encbr.Get());
 
   frc::SmartDashboard::PutNumber("Turret Heading (radians): ", HorizontalTurret.GetEncoder().GetPosition())
 
@@ -433,7 +436,7 @@ void TeleopPeriodic() {
 
   //Resetting functionalities, MUST do at the start of every match
   //gyroscope resets when Y is pressed
-  if(controller.GetYButton()){
+  if(controller.GetYButtonPressed()){
     ResetGyro();
   }
 
@@ -444,7 +447,7 @@ void TeleopPeriodic() {
     HorizontalTurret.StopMotor();
   }
 
-  if(controller.GetAButton()){
+  if(controller.GetAButtonPressed()){
     VerticalTurret.GetEncoder().SetPosition(0);
     HorizontalTurret.GetEncoder().SetPosition(0);
   }
@@ -672,9 +675,8 @@ void SimulationPeriodic() {}
 
 //resets the gyroscope
 void ResetGyro() {
-  ahrs->Reset();
-  ahrs->ResetDisplacement();
-  ahrs->SetAngleAdjustment(0);
+  ahrs->ZeroYaw();
+  ResetOdometry();
 }
 
 //reset odometry
