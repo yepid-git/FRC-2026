@@ -531,7 +531,7 @@ void AlignTurret(){
   //calculate angle based on the x & y distances
   frc::Rotation2d angle = distance.Angle();
 
-  frc::Rotation2d TurretTarget = angle - pose.Rotation();
+  frc::Rotation2d TurretTarget = pose.Rotation() - angle;;
 
   //Sets the rotational motor's angle, to that position
   HorizontalTurret.GetClosedLoopController().SetReference(
