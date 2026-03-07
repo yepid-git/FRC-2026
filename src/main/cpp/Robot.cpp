@@ -381,17 +381,12 @@ void RobotPeriodic() {
   double yposition = position.Y().value();
   double xposition = position.X().value();
   double heading = position.Rotation().Degrees().value();
+  
   frc::SmartDashboard::PutNumber("y position: ", yposition);
   frc::SmartDashboard::PutNumber("x position: ", xposition);
   frc::SmartDashboard::PutNumber("angle: ", heading);
 
   frc::SmartDashboard::PutNumber("Raw Yaw: ", ahrs->GetYaw());
-  frc::SmartDashboard::PutNumber("Raw Angle: ", ahrs->GetAngle());
-
-  frc::SmartDashboard::PutNumber("encfl.Get", encfl.Get());
-  frc::SmartDashboard::PutNumber("encfr.Get", encfr.Get());
-  frc::SmartDashboard::PutNumber("encbl.Get", encbl.Get());
-  frc::SmartDashboard::PutNumber("encbr.Get", encbr.Get());
 
   frc::SmartDashboard::PutNumber("Turret Heading (radians): ", HorizontalTurret.GetEncoder().GetPosition());
   frc::SmartDashboard::PutNumber("POV: ", controller.GetPOV());
@@ -583,7 +578,7 @@ void Drive(double x, double y, double rotate){
 
   
   //rot2d reflects the AHRS gyroscope orientation
-  frc::Rotation2d rot2d{units::degree_t{ahrs->GetAngle()}};
+  frc::Rotation2d rot2d{units::degree_t{ahrs->GetYaw()}};
 
   //bunch of debugging utilities
   frc::SmartDashboard::PutNumber("Drive:x", x);
