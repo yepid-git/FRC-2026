@@ -389,11 +389,6 @@ void RobotPeriodic() {
   frc::SmartDashboard::PutNumber("Raw Yaw", ahrs->GetYaw());
   frc::SmartDashboard::PutNumber("Raw Angle", ahrs->GetAngle());
 
-  frc::SmartDashboard::PutNumber("encfl.Get", encfl.Get());
-  frc::SmartDashboard::PutNumber("encfr.Get", encfr.Get());
-  frc::SmartDashboard::PutNumber("encbl.Get", encbl.Get());
-  frc::SmartDashboard::PutNumber("encbr.Get", encbr.Get());
-
   frc::SmartDashboard::PutNumber("Turret Heading (radians): ", HorizontalTurret.GetEncoder().GetPosition())
 
   //every 20ms, robot receives new data from limelight
