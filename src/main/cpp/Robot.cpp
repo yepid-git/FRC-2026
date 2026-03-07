@@ -251,7 +251,7 @@ void RobotInit(){
 
 
   VerticalTurretConfig
-    .Inverted(false)
+    .Inverted(true)
     .SetIdleMode(rev::spark::SparkBaseConfig::IdleMode::kBrake);
   
   VerticalTurretConfig.closedLoop
@@ -462,13 +462,13 @@ void TeleopPeriodic() {
     HorizontalTurret.Set(-HorizontalSpeed);
   } else if (controller.GetPOV() == 180){
     //down
-    VerticalTurret.Set(-VerticalSpeed);
+    VerticalTurret.Set(VerticalSpeed);
   } else if (controller.GetPOV() == 0){
     //up
-    VerticalTurret.Set(VerticalSpeed);
+    VerticalTurret.Set(-VerticalSpeed);
   } else if (controller.GetStartButton()) {
     HorizontalTurret.GetEncoder().SetPosition(0);
-  } else {
+  } else { //ensures autoalignment and manual turret movement are mutually exclusive
     if(controller.GetAButton()){
       AlignTurret();
     } else {
