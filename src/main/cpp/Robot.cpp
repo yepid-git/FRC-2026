@@ -211,7 +211,7 @@ void RobotInit(){
 
   //leader shooter config 
   shooterLeaderConfig
-    .Inverted(false)
+    .Inverted(true)
     .SetIdleMode(rev::spark::SparkBaseConfig::IdleMode::kCoast);
   
   shooterLeaderConfig.closedLoop
@@ -239,7 +239,8 @@ void RobotInit(){
   HorizontalTurretConfig.closedLoop
   .SetFeedbackSensor(rev::spark::FeedbackSensor::kPrimaryEncoder)
   .Pid(0.2, 0.0, 0.0)
-  .PositionWrappingEnabled(false)
+  .PositionWrappingEnabled(true)
+  .PositionWrappingInputRange(-PI, PI)
   .OutputRange(-0.2, 0.2);
 
   HorizontalTurretConfig.softLimit
@@ -296,7 +297,8 @@ void RobotInit(){
   //shooter configs
   firesh.Configure(shooterLeaderConfig, rev::spark::SparkBase::ResetMode::kResetSafeParameters,
     rev::spark::SparkBase::PersistMode::kPersistParameters);
-    
+
+  rev::spark::SparkClosedLoopController pidfiresh = firesh.GetClosedLoopController();
   firesh2.Configure(shooterFollowerConfig, rev::spark::SparkBase::ResetMode::kResetSafeParameters,
     rev::spark::SparkBase::PersistMode::kPersistParameters);
 
@@ -485,11 +487,11 @@ void TeleopPeriodic() {
 
 
   //shooter code
-  double targetrpm = -6000;
+  double targetrpm = 6000;
 
   //if bumper is pressed, fire both motors at the target rpm, otherwise set their velocities to 0
   if(controller.GetRightBumper()){
-  firesh.GetClosedLoopController().SetReference(
+  pidfiresh.SetReference(
       targetrpm,
       rev::spark::SparkBase::ControlType::kVelocity
   );
