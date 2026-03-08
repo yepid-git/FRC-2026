@@ -48,14 +48,17 @@
 class Robot : public frc::TimedRobot {
 
   //limelight placeholder variables
-  bool foundtarget = false;
+  bool hastarget = false;
   double tx;
   double ty;
   double ta;
 
-  double VerticalSpeed = 0.1;
-  double HorizontalSpeed = 0.4;
+  //vertical and horizontal turret
+  double VerticalSpeed = 0.1; 
+  double HorizontalSpeed = 0.2;
   double IndexerSpeed = 1;
+  double HopperSpeed = 0.7; //make negative if too fast
+  double HangSpeed = 0.5;
 
   char color = 'b'; //color variable 
 
@@ -140,10 +143,15 @@ class Robot : public frc::TimedRobot {
 
   rev::spark::SparkMax Intake{11, rev::spark::SparkLowLevel::MotorType::kBrushless};
   rev::spark::SparkBaseConfig IntakeConfig{};
-  //intake CAN ID
-  //rev::spark::SparkMax intake{30, rev::spark::SparkLowLevel::MotorType::kBrushless};
+
+  //hang CAN ID
+  rev::spark::SparkMax Hang{30, rev::spark::SparkLowLevel::MotorType::kBrushless};
+  rev::spark::SparkBaseConfig HangConfig{};
+
+  //spindexer/hopper
+  rev::spark::SparkMax Hopper{31, rev::spark::SparkLowLevel::MotorType::kBrushless};
+  rev::spark::SparkBaseConfig hopperConfig{};
   
-  //timer object
   frc::Timer time;
 
 
@@ -181,11 +189,9 @@ void RobotInit(){
     color = 'r';
   }
 
-  //limelight configs (disabled for now)
-  /*
+
   LimelightHelpers::setPipelineIndex("", 0);
   LimelightHelpers::setLEDMode_ForceOn("");
-  */
 
   //lots of configs
   //Note: TUNE PID's Later (maybe?)
@@ -250,6 +256,16 @@ void RobotInit(){
   .SetIdleMode(rev::spark::SparkBaseConfig::IdleMode::kCoast)
   .Follow(firesh, true);
 
+  hopperConfig
+    .Inverted(true)
+    .SetIdleMode(rev::spark::SparkBaseConfig::IdleMode::kCoast);
+  
+  hopperConfig.closedLoop
+    .SetFeedbackSensor(rev::spark::FeedbackSensor::kPrimaryEncoder)
+    .Pid(0.0001, 0.0, 0.0)
+    //decrease if motor fires at full power
+    .VelocityFF(0.000147)
+    .IZone(0);
 
   HorizontalTurretConfig
   .Inverted(false)
@@ -339,7 +355,11 @@ void RobotInit(){
 
   Intake.Configure(IntakeConfig,rev::spark::SparkBase::ResetMode::kResetSafeParameters,
     rev::spark::SparkBase::PersistMode::kPersistParameters);
-  //rotation motors need seeding to know what angle they start at
+  
+  Hang.Configure(HangConfig, rev::spark::SparkBase::ResetMode::kResetSafeParameters,
+    rev::spark::SparkBase::PersistMode::kPersistParameters);
+  
+    //rotation motors need seeding to know what angle they start at
   //similar to the absolute encoders, the analog encoders also return the wheel's angle in ROTATIONS
   //we want RADIANS!!!
   //2pi rad per rotation
@@ -372,13 +392,13 @@ void RobotInit(){
     .IZone(4000);
 
   //configurations for hang motors
-  hangConfig
+  HangConfig
     .Inverted(true)
     .SetIdleMode(rev::spark::SparkBaseConfig::IdleMode::kBrake);
-  hangConfig.encoder
+  HangConfig.encoder
     .PositionConversionFactor(1)
     .VelocityConversionFactor(1);
-  hangConfig.closedLoop
+  HangConfig.closedLoop
     .SetFeedbackSensor(rev::spark::FeedbackSensor::kPrimaryEncoder)
     .Pid(0.0005, 0.0000001, 0.0)
     .IZone(4000);
@@ -399,7 +419,7 @@ void RobotInit(){
 
   poseEstimator = std::make_unique<frc::SwerveDrivePoseEstimator<4>>(
     kinematics,
-    frc::Rotation2d{units::degree_t{ahrs->GetYaw()}},
+    frc::Rotation2d{units::degree_t{ahrs->GetAngle()}},
     GetSwervePositions(),
     frc::Pose2d{0_m, 0_m, 0_rad}
   );
@@ -465,7 +485,7 @@ void RobotInit(){
     [this]() { return poseEstimator->GetEstimatedPosition(); },
     [this](frc::Pose2d pose) {
         poseEstimator->ResetPosition(
-            frc::Rotation2d{units::degree_t{ahrs->GetYaw()}},
+            frc::Rotation2d{units::degree_t{ahrs->GetAngle()}},
             GetSwervePositions(),
             pose
         );
@@ -486,9 +506,9 @@ void RobotInit(){
 
 //should probably use sig figs but im scared
 LimelightHelpers::setCameraPose_RobotSpace(
-    "limelight",
+    "",
     0.201695558,   // forward from center (positive = toward front)
-    0.2302129,   // side offset (positive = left)
+    -0.2302129,   // side offset (positive = left)
     0.24851995,   // height from floor level of robot center
     0.0,   // roll
     0.0,  // pitch (negative = tilted down toward floor)
@@ -502,7 +522,7 @@ LimelightHelpers::setCameraPose_RobotSpace(
 void RobotPeriodic() {
   UpdatePose();
   LimelightHelpers::SetRobotOrientation(
-    "limelight",
+    "",
     ahrs->GetYaw(),
     0, 0, 0, 0, 0 //sets yawrate, pitch, pitchrate, and roll to 0
   );
@@ -510,7 +530,7 @@ void RobotPeriodic() {
   LimelightHelpers::PoseEstimate mt2;
 
   //if(color == 'b'){
-  mt2 = LimelightHelpers::getBotPoseEstimate_wpiBlue_MegaTag2("limelight");
+  mt2 = LimelightHelpers::getBotPoseEstimate_wpiBlue_MegaTag2("");
   //}
   /* else {
   mt2 = LimelightHelpers::getBotPoseEstimate_wpiRed_MegaTag2("limelight");
@@ -521,8 +541,10 @@ void RobotPeriodic() {
 
   if (isTrustworthy) {
   poseEstimator->SetVisionMeasurementStdDevs(
-    {0.5, 0.5, 686367.69} // x, y, theta (ignore vision rotation)
+    {0.01, 0.01, 686367.69} // x, y, theta (ignore vision rotation)
   );
+
+  frc::SmartDashboard::PutBoolean("mt2 is trustworthy", isTrustworthy);
 
   /*if its trustworthy, add the pose estimated by megatag2 into our pose estimator
   It utilizes a kalman filter! In other words
@@ -538,8 +560,8 @@ void RobotPeriodic() {
 
 
   }
-  /*
-  frc::Pose2d position = odometry->GetPose();
+  
+  frc::Pose2d position = poseEstimator->GetEstimatedPosition();
   double yposition = position.Y().value();
   double xposition = position.X().value();
   double heading = position.Rotation().Degrees().value();
@@ -567,21 +589,29 @@ void RobotPeriodic() {
   frc::SmartDashboard::PutNumber("Distance from goal (x): ", distance.X().value());
   frc::SmartDashboard::PutNumber("Distance from goal (y): ", distance.Y().value());
   frc::SmartDashboard::PutNumber("Distance from goal (overall): ", distance.Norm().value());
-  */
+  
 
   //every 20ms, robot receives new data from limelight
   //currently not important for purposes of drive testing, but it will be in auto
-  /*
-  foundtarget = LimelightHelpers::getTV("");
+  
+  hastarget = LimelightHelpers::getTV("");
   tx = LimelightHelpers::getTX("");
   ty = LimelightHelpers::getTY("");
   ta = LimelightHelpers::getTA("");
 
-  frc::SmartDashboard::PutBoolean("HasTarget:", foundtarget);
+  frc::SmartDashboard::PutNumber("HasTarget:", hastarget);
   frc::SmartDashboard::PutNumber("TX", tx);
   frc::SmartDashboard::PutNumber("TY", ty);
   frc::SmartDashboard::PutNumber("TA", ta);
-  */
+  
+
+
+  frc::SmartDashboard::PutNumber("Pose X (MT2): ", mt2.pose.X().value());
+  frc::SmartDashboard::PutNumber("Pose Y (MT2): ", mt2.pose.Y().value());
+
+  frc::SmartDashboard::PutNumber("MT2 tagCount", mt2.tagCount);
+  frc::SmartDashboard::PutNumber("MT2 timestamp", mt2.timestampSeconds.value());
+  frc::SmartDashboard::PutBoolean("isTrustworthy", isTrustworthy);
 
 }
 
@@ -680,11 +710,13 @@ void TeleopPeriodic() {
     //left
     HorizontalTurret.Set(-HorizontalSpeed);
   } else if (controller.GetPOV() == 180){
-    //down
-    VerticalTurret.Set(VerticalSpeed);
+    //down TEMPORARY REMOVAL OF VERTICAL TURRET
+    //VerticalTurret.Set(VerticalSpeed);
+    Hang.Set(-HangSpeed);
   } else if (controller.GetPOV() == 0){
-    //up
-    VerticalTurret.Set(-VerticalSpeed);
+    //up TEMPORARY REMOVAL OF VERTICAL TURRET
+    //VerticalTurret.Set(-VerticalSpeed);
+    Hang.Set(HangSpeed);
   } else if (controller.GetStartButton()) {
     HorizontalTurret.GetEncoder().SetPosition(0);
   } else { //ensures autoalignment and manual turret movement are mutually exclusive
@@ -693,6 +725,7 @@ void TeleopPeriodic() {
     } else {
       HorizontalTurret.StopMotor();
       VerticalTurret.StopMotor();
+      Hang.StopMotor();
     }
 
   }
@@ -714,6 +747,7 @@ void TeleopPeriodic() {
 
 
   //shooter code
+  //actual rpm is targetrpm * 22/15
   double targetrpm = 6368;
 
   //if bumper is pressed, fire both motors at the target rpm, otherwise set their velocities to 0
@@ -731,8 +765,10 @@ void TeleopPeriodic() {
   //controller triggers set indexer velocity
   if(controller.GetLeftTriggerAxis()){
     Indexer.Set(-IndexerSpeed);
+    Hopper.Set(HopperSpeed);
   } else if (controller.GetRightTriggerAxis()){
     Indexer.Set(IndexerSpeed);
+    Hopper.Set(HopperSpeed);
   } else {
     Indexer.StopMotor();
   }
@@ -912,7 +948,7 @@ void ResetGyro() {
 //reset odometry
 void ResetPoseEstimator() {
   poseEstimator->ResetPosition(
-  frc::Rotation2d{units::degree_t{ahrs->GetYaw()}}, 
+  frc::Rotation2d{units::degree_t{ahrs->GetAngle()}}, 
   GetSwervePositions(),
   frc::Pose2d{0_m, 0_m, 0_rad}
   );
@@ -929,7 +965,7 @@ void UpdatePose(){
   */
 
   pose = poseEstimator->Update(
-    frc::Rotation2d{units::degree_t{ahrs->GetYaw()}},
+    frc::Rotation2d{units::degree_t{ahrs->GetAngle()}},
     GetSwervePositions()
   );
 
