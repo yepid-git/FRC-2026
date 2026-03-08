@@ -239,7 +239,7 @@ void RobotInit(){
   HorizontalTurretConfig.closedLoop
   .SetFeedbackSensor(rev::spark::FeedbackSensor::kPrimaryEncoder)
   .Pid(0.2, 0.0, 0.0)
-  .PositionWrappingEnabled(true)
+  .PositionWrappingEnabled(false) //experiment
   .PositionWrappingInputRange(-PI, PI)
   .OutputRange(-0.4, 0.4);
 
@@ -544,9 +544,14 @@ void AlignTurret(){
 
   frc::Rotation2d TurretTarget = angle - pose.Rotation();
 
+  //normalizing the target angle to stay within soft limits
+  double targetRad = TurretTarget.Radians().value();
+  while (targetRad > PI)  targetRad -= 2.0 * PI;
+  while (targetRad < -PI) targetRad += 2.0 * PI;
+
   //Sets the rotational motor's angle, to that position
   HorizontalTurret.GetClosedLoopController().SetReference(
-    TurretTarget.Radians().value(),
+    targetRad,
   rev::spark::SparkBase::ControlType::kPosition
   );
 
@@ -610,17 +615,24 @@ void Drive(double x, double y, double rotate){
   //max speeds become 1 x factor units / sec
   //max x & y speed become 4m/s
   //max rotation speed is 3 rad/s
+
+  //trying to increase speed
   units::radians_per_second_t rad{rotate*3};
-  units::meters_per_second_t speedy{y*4};
-  units::meters_per_second_t speedx{x*4};
+  units::meters_per_second_t speedy{y*5};
+  units::meters_per_second_t speedx{x*5};
+
+  //speedx = (x * std::abs(x)) * 4_mps;
 
   /* ChassisSpeeds::FromFieldRelativeSpeeds takes in desired x, desired y, and angular velocities
   as well as the robots current angle
   */
   frc::ChassisSpeeds speeds = frc::ChassisSpeeds::FromFieldRelativeSpeeds(
     //uses the slewrate limiter to determine necessary chassis speeds
-    limitx.Calculate(speedx),
-    limity.Calculate(speedy),
+    //taking off speed limits, im curious...
+    //limitx.Calculate(speedx),
+    //limity.Calculate(speedy),
+    speedx,
+    speedy,
     rad,  // sensitivity multiplier?? increase if rotation is sluggish, decrease if jittery
     rot2d  // This is what enables field-oriented control
   );
@@ -744,6 +756,7 @@ void xstop(){
 
   //yes the repeated GetClosedLoopController() is ugly
   //no you cannot store the closed loop controllers as variables
+  //actually you can. note: simplify ts later 
 }
 
 
