@@ -30,6 +30,7 @@
 #include <frc/MathUtil.h>
 #include <frc/kinematics/SwerveDriveOdometry.h>
 #include <units/time.h>
+#include <frc/estimator/SwerveDrivePoseEstimator.h>
 
 
 
@@ -44,6 +45,11 @@ class Robot : public frc::TimedRobot {
   double VerticalSpeed = 0.1;
   double HorizontalSpeed = 0.4;
   double IndexerSpeed = 1;
+
+  char color = 'b'; //color variable 
+
+  //member for the auto command
+  frc2::CommandPtr autoCommand = frc2::cmd::None();
 
   //placeholder variable for the goal hub's position on the field
   frc::Translation2d GoalPosition{4.612_m, -4.021_m};
@@ -152,7 +158,8 @@ class Robot : public frc::TimedRobot {
   bool m_manual_mode = true;
 
   //declaring odometry object at class level using pointer, to avoid scoping issues
-  std::unique_ptr<frc::SwerveDriveOdometry<4>> odometry;
+  //std::unique_ptr<frc::SwerveDriveOdometry<4>> odometry; swapped for pose estimator!
+  std::unique_ptr<frc::SwerveDrivePoseEstimator<4>> poseEstimator;
   frc::Pose2d pose;
 
 
@@ -361,25 +368,71 @@ void RobotInit(){
     .IZone(4000);
 
     
+  
   //odometry object
   //tracks robot position on field by using the motor encoders
+  /* removed because incompatible with limelight
   odometry = std::make_unique<frc::SwerveDriveOdometry<4>>(
     kinematics,
     frc::Rotation2d{units::degree_t{ahrs->GetYaw()}},
     GetSwervePositions(),
     frc::Pose2d{0_m, 0_m, 0_rad}
   );
-
   pose = odometry->GetPose();
+  */
+
+  poseEstimator = std::make_unique<frc::SwerveDrivePoseEstimator<4>>(
+    kinematics,
+    frc::Rotation2d{units::degree_t{ahrs->GetYaw()}},
+    GetSwervePositions(),
+    frc::Pose2d{0_m, 0_m, 0_rad}
+  );
+
+
 
 }
 
 
 
 void RobotPeriodic() {
-
-  
   UpdatePose();
+  LimelightHelpers::SetRobotOrientation(
+    "limelight",
+    ahrs->GetYaw(),
+    0, 0, 0, 0, 0 //sets yawrate, pitch, pitchrate, and roll to 0
+  );
+
+  LimelightHelpers::PoseEstimate mt2;
+
+  if(color == 'b'){
+  mt2 = LimelightHelpers::getBotPoseEstimate_wpiBlue_MegaTag2("limelight");
+  } else {
+  mt2 = LimelightHelpers::getBotPoseEstimate_wpiRed_MegaTag2("limelight");
+  }
+
+  //only trust megatag when there is at least one tag, and the robot isn't rotating at unreasonable speed
+  bool isTrustworthy = mt2.tagCount >= 1 && std::abs(ahrs->GetRate()) < 720.0; 
+
+  if (isTrustworthy) {
+  poseEstimator->SetVisionMeasurementStdDevs(
+    {0.5, 0.5, 686367.69} // x, y, theta (ignore vision rotation)
+  );
+
+  /*if its trustworthy, add the pose estimated by megatag2 into our pose estimator
+  It utilizes a kalman filter! In other words
+  if vision stdev is small relative to gyro/encoder stdev, the robot snaps towards the vision estimate
+  (favors vision)
+  if its large, then the robot slowly drifts towards the vision estimate
+  (favors encoders/gyro)
+  */
+  poseEstimator->AddVisionMeasurement(
+    mt2.pose,
+    mt2.timestampSeconds
+  );
+
+
+  }
+  /*
   frc::Pose2d position = odometry->GetPose();
   double yposition = position.Y().value();
   double xposition = position.X().value();
@@ -408,6 +461,7 @@ void RobotPeriodic() {
   frc::SmartDashboard::PutNumber("Distance from goal (x): ", distance.X().value());
   frc::SmartDashboard::PutNumber("Distance from goal (y): ", distance.Y().value());
   frc::SmartDashboard::PutNumber("Distance from goal (overall): ", distance.Norm().value());
+  */
 
   //every 20ms, robot receives new data from limelight
   //currently not important for purposes of drive testing, but it will be in auto
@@ -694,8 +748,8 @@ void ResetGyro() {
 }
 
 //reset odometry
-void ResetOdometry() {
-  odometry->ResetPosition(
+void ResetPoseEstimator() {
+  poseEstimator->ResetPosition(
   frc::Rotation2d{units::degree_t{ahrs->GetYaw()}}, 
   GetSwervePositions(),
   frc::Pose2d{0_m, 0_m, 0_rad}
@@ -705,7 +759,14 @@ void ResetOdometry() {
 
 //helper function to update pose
 void UpdatePose(){
+  /*
   pose = odometry->Update(
+    frc::Rotation2d{units::degree_t{ahrs->GetYaw()}},
+    GetSwervePositions()
+  );
+  */
+
+  pose = poseEstimator->Update(
     frc::Rotation2d{units::degree_t{ahrs->GetYaw()}},
     GetSwervePositions()
   );
