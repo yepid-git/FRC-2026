@@ -13,6 +13,12 @@
         {
           "type": "path",
           "data": {
+            "pathName": "blue path 1 i"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
             "pathName": "blue path 1 b"
           }
         }

@@ -41,6 +41,8 @@
 #include <frc/DriverStation.h>
 #include <pathplanner/lib/util/DriveFeedforwards.h>
 #include <pathplanner/lib/commands/PathPlannerAuto.h>
+#include <pathplanner/lib/path/PathPlannerPath.h>
+
 
 
 class Robot : public frc::TimedRobot {
@@ -323,7 +325,6 @@ void RobotInit(){
   firesh.Configure(shooterLeaderConfig, rev::spark::SparkBase::ResetMode::kResetSafeParameters,
     rev::spark::SparkBase::PersistMode::kPersistParameters);
 
-  rev::spark::SparkClosedLoopController pidfiresh = firesh.GetClosedLoopController();
   firesh2.Configure(shooterFollowerConfig, rev::spark::SparkBase::ResetMode::kResetSafeParameters,
     rev::spark::SparkBase::PersistMode::kPersistParameters);
 
@@ -443,11 +444,20 @@ void RobotInit(){
     frc::Rotation2d frAngle{units::radian_t{rotfr.GetEncoder().GetPosition()}};
     frc::Rotation2d blAngle{units::radian_t{rotbl.GetEncoder().GetPosition()}};
     frc::Rotation2d brAngle{units::radian_t{rotbr.GetEncoder().GetPosition()}};
+    //SwerveModuleState::Optimize takes in the state, and the current angle, then optimizes the state to include that angle
+    auto flOptimized = frc::SwerveModuleState::Optimize(fl, flAngle);
+    auto frOptimized = frc::SwerveModuleState::Optimize(fr, frAngle);
+    auto blOptimized = frc::SwerveModuleState::Optimize(bl, blAngle);
+    auto brOptimized = frc::SwerveModuleState::Optimize(br, brAngle);
 
-    SetState(frc::SwerveModuleState::Optimize(fl, flAngle), wheelfl, rotfl);
-    SetState(frc::SwerveModuleState::Optimize(fr, frAngle), wheelfr, rotfr);
-    SetState(frc::SwerveModuleState::Optimize(bl, blAngle), wheelbl, rotbl);
-    SetState(frc::SwerveModuleState::Optimize(br, brAngle), wheelbr, rotbr);
+
+    //set state takes in the perfectly optimized state, the movement controller, and steering controller
+    //optimized state contains two values, the speed and angle
+
+    SetState(flOptimized, wheelfl, rotfl);
+    SetState(frOptimized, wheelfr, rotfr);
+    SetState(blOptimized, wheelbl, rotbl);
+    SetState(brOptimized, wheelbr, rotbr);
   };
 
   pathplanner::RobotConfig config = pathplanner::RobotConfig::fromGUISettings();
@@ -493,17 +503,18 @@ void RobotPeriodic() {
   UpdatePose();
   LimelightHelpers::SetRobotOrientation(
     "limelight",
-    ahrs->GetAngle(),
+    ahrs->GetYaw(),
     0, 0, 0, 0, 0 //sets yawrate, pitch, pitchrate, and roll to 0
   );
 
   LimelightHelpers::PoseEstimate mt2;
 
-  if(color == 'b'){
+  //if(color == 'b'){
   mt2 = LimelightHelpers::getBotPoseEstimate_wpiBlue_MegaTag2("limelight");
-  } else {
+  //}
+  /* else {
   mt2 = LimelightHelpers::getBotPoseEstimate_wpiRed_MegaTag2("limelight");
-  }
+  } */
 
   //only trust megatag when there is at least one tag, and the robot isn't rotating at unreasonable speed
   bool isTrustworthy = mt2.tagCount >= 1 && std::abs(ahrs->GetRate()) < 720.0; 
@@ -584,30 +595,58 @@ void AutonomousInit() {
   frc2::CommandPtr shootCommand = 
   frc2::cmd::Run([this]() {
       pidfiresh.SetReference(6368, rev::spark::SparkBase::ControlType::kVelocity);
-  }).Until([this]() {
-      return std::abs(firesh.GetEncoder().GetVelocity() - 6368) < 200;
-  }).WithTimeout(1.0_s)
-
-  .AndThen(frc2::cmd::Run([this]() {
-      pidfiresh.SetReference(6368, rev::spark::SparkBase::ControlType::kVelocity);
       Indexer.Set(IndexerSpeed);
-  }).WithTimeout(2.0_s))
+  }).WithTimeout(2.0_s)
   .AndThen([this]() {
       firesh.StopMotor();
       Indexer.StopMotor();
   });
 
+
+  frc2::CommandPtr intakeCommand = 
+  frc2::cmd::Run([this]() {
+      Intake.Set(-0.8);
+  });
+
+  frc2::CommandPtr alignTurretCommand = 
+  frc2::cmd::Run([this]() {
+      AlignTurret();
+  });
+
+  frc2::CommandPtr spinFlywheelCommand = 
+  frc2::cmd::Run([this]() {
+      pidfiresh.SetReference(6368, rev::spark::SparkBase::ControlType::kVelocity);
+  });
+
+  /*
   autoCommand = pathplanner::PathPlannerAuto("auto").ToPtr()
   .AndThen(std::move(shootCommand))
   .WithTimeout(14.5_s);
+  */
+ //load each path separately
+  auto path1c = pathplanner::PathPlannerPath::fromPathFile("blue path 1 c");
+  auto path1i = pathplanner::PathPlannerPath::fromPathFile("blue path 1 i");
+  auto path1b = pathplanner::PathPlannerPath::fromPathFile("blue path 1 b");
+  
+  //first, path to center runs alone
+  autoCommand = pathplanner::AutoBuilder::followPath(path1c)
+  //next, the path to intake, as well as the intake commands run simultaneously
+  .AndThen(pathplanner::AutoBuilder::followPath(path1i).DeadlineFor(std::move(intakeCommand)))
+  //the robot takes the path back, while aligning the turret
+  .AndThen(pathplanner::AutoBuilder::followPath(path1b).DeadlineFor(std::move(alignTurretCommand).AlongWith(std::move(spinFlywheelCommand))))
+  //the robot shoots!
+  .AndThen(std::move(shootCommand))
+  //timeout to prevent hitting time limit
+  .WithTimeout(14.5_s);
   autoCommand.Schedule();
+
+  
   time.Start();
 
   
 }
 
 void AutonomousPeriodic() {
-  Indexer.Set(0.9);
   frc2::CommandScheduler::GetInstance().Run();
 }
 
@@ -821,7 +860,7 @@ void Drive(double x, double y, double rotate){
   auto modules = kinematics.ToSwerveModuleStates(speeds);
 
   //safety to prevent wheels from spinning too fast
-  kinematics.DesaturateWheelSpeeds(&modules, 4_mps);
+  kinematics.DesaturateWheelSpeeds(&modules, 5_mps);
 
   //just stores the swerve module states in each motor
   auto [fl, fr, bl, br] = modules;
@@ -942,8 +981,6 @@ void xstop(){
   //no you cannot store the closed loop controllers as variables
   //actually you can. note: simplify ts later 
 }
-
-
 };
 
 #ifndef RUNNING_FRC_TESTS
