@@ -777,6 +777,7 @@ void TeleopPeriodic() {
     //controller triggers set indexer velocity
   if(controller.GetLeftBumper()){
    Intake.Set(-0.7);
+   Hopper.Set(-HopperSpeed);
   } else {
     Intake.StopMotor();
   }
