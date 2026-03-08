@@ -32,6 +32,15 @@
 #include <units/time.h>
 #include <frc/estimator/SwerveDrivePoseEstimator.h>
 
+//includes for auto
+#include <pathplanner/lib/auto/AutoBuilder.h>
+#include <pathplanner/lib/config/RobotConfig.h>
+#include <pathplanner/lib/controllers/PPHolonomicDriveController.h>
+#include <frc2/command/CommandScheduler.h>
+#include <frc2/command/Commands.h>
+#include <frc/DriverStation.h>
+#include <pathplanner/lib/util/DriveFeedforwards.h>
+#include <pathplanner/lib/commands/PathPlannerAuto.h>
 
 
 class Robot : public frc::TimedRobot {
@@ -164,6 +173,12 @@ class Robot : public frc::TimedRobot {
 
 
 void RobotInit(){
+  //color change
+  auto alliance = frc::DriverStation::GetAlliance();
+  if (alliance && alliance.value() == frc::DriverStation::Alliance::kRed) {
+    color = 'r';
+  }
+
   //limelight configs (disabled for now)
   /*
   LimelightHelpers::setPipelineIndex("", 0);
@@ -388,7 +403,87 @@ void RobotInit(){
     frc::Pose2d{0_m, 0_m, 0_rad}
   );
 
+  /*Lambda function used to gain the
+  robot-relative speeds from the encoders
+  Pathplanner needs this to know how fast the robot is moving
+  */
+  auto getRobotRelativeSpeeds = [this](){
+    return kinematics.ToChassisSpeeds(
+      frc::SwerveModuleState{
+        units::meters_per_second_t{wheelfl.GetEncoder().GetVelocity()},
+        frc::Rotation2d{units::radian_t{rotfl.GetEncoder().GetPosition()}}
+      },
+      frc::SwerveModuleState{
+        units::meters_per_second_t{wheelfr.GetEncoder().GetVelocity()},
+        frc::Rotation2d{units::radian_t{rotfr.GetEncoder().GetPosition()}}
+      },
+      frc::SwerveModuleState{
+        units::meters_per_second_t{wheelbl.GetEncoder().GetVelocity()},
+        frc::Rotation2d{units::radian_t{rotbl.GetEncoder().GetPosition()}}
+      },
+      frc::SwerveModuleState{
+        units::meters_per_second_t{wheelbr.GetEncoder().GetVelocity()},
+        frc::Rotation2d{units::radian_t{rotbr.GetEncoder().GetPosition()}}
+      }
+    );
+  };
 
+
+  //pathplanner gives robot relative speeds
+  //we apply them
+
+  //notice how this is VERY similar to regular drive code
+  auto driveRobotRelative = [this](frc::ChassisSpeeds speeds, pathplanner::DriveFeedforwards ff) {
+    speeds = frc::ChassisSpeeds::Discretize(speeds, 0.02_s);
+    auto modules = kinematics.ToSwerveModuleStates(speeds);
+    kinematics.DesaturateWheelSpeeds(&modules, 4_mps);
+    auto [fl, fr, bl, br] = modules;
+
+    frc::Rotation2d flAngle{units::radian_t{rotfl.GetEncoder().GetPosition()}};
+    frc::Rotation2d frAngle{units::radian_t{rotfr.GetEncoder().GetPosition()}};
+    frc::Rotation2d blAngle{units::radian_t{rotbl.GetEncoder().GetPosition()}};
+    frc::Rotation2d brAngle{units::radian_t{rotbr.GetEncoder().GetPosition()}};
+
+    SetState(frc::SwerveModuleState::Optimize(fl, flAngle), wheelfl, rotfl);
+    SetState(frc::SwerveModuleState::Optimize(fr, frAngle), wheelfr, rotfr);
+    SetState(frc::SwerveModuleState::Optimize(bl, blAngle), wheelbl, rotbl);
+    SetState(frc::SwerveModuleState::Optimize(br, brAngle), wheelbr, rotbr);
+  };
+
+  pathplanner::RobotConfig config = pathplanner::RobotConfig::fromGUISettings();
+  pathplanner::AutoBuilder::configure(
+    [this]() { return poseEstimator->GetEstimatedPosition(); },
+    [this](frc::Pose2d pose) {
+        poseEstimator->ResetPosition(
+            frc::Rotation2d{units::degree_t{ahrs->GetYaw()}},
+            GetSwervePositions(),
+            pose
+        );
+    },
+    getRobotRelativeSpeeds,
+    driveRobotRelative,
+    std::make_shared<pathplanner::PPHolonomicDriveController>(
+        pathplanner::PIDConstants(5.0, 0.0, 0.0),
+        pathplanner::PIDConstants(5.0, 0.0, 0.0)
+    ),
+    config,
+    []() {
+        auto alliance = frc::DriverStation::GetAlliance();
+        return alliance && alliance.value() == frc::DriverStation::Alliance::kRed;
+    },
+    nullptr
+);
+
+//should probably use sig figs but im scared
+LimelightHelpers::setCameraPose_RobotSpace(
+    "limelight",
+    0.201695558,   // forward from center (positive = toward front)
+    0.2302129,   // side offset (positive = left)
+    0.24851995,   // height from floor level of robot center
+    0.0,   // roll
+    0.0,  // pitch (negative = tilted down toward floor)
+    0.0    // yaw (0 = facing forward)
+);
 
 }
 
@@ -398,7 +493,7 @@ void RobotPeriodic() {
   UpdatePose();
   LimelightHelpers::SetRobotOrientation(
     "limelight",
-    ahrs->GetYaw(),
+    ahrs->GetAngle(),
     0, 0, 0, 0, 0 //sets yawrate, pitch, pitchrate, and roll to 0
   );
 
@@ -483,13 +578,41 @@ void RobotPeriodic() {
 void AutonomousInit() {
   time.Reset();
   ResetGyro();
+  ResetPoseEstimator();
+  
+  //defining my own shoot command
+  frc2::CommandPtr shootCommand = 
+  frc2::cmd::Run([this]() {
+      pidfiresh.SetReference(6368, rev::spark::SparkBase::ControlType::kVelocity);
+  }).Until([this]() {
+      return std::abs(firesh.GetEncoder().GetVelocity() - 6368) < 200;
+  }).WithTimeout(1.0_s)
+
+  .AndThen(frc2::cmd::Run([this]() {
+      pidfiresh.SetReference(6368, rev::spark::SparkBase::ControlType::kVelocity);
+      Indexer.Set(IndexerSpeed);
+  }).WithTimeout(2.0_s))
+  .AndThen([this]() {
+      firesh.StopMotor();
+      Indexer.StopMotor();
+  });
+
+  autoCommand = pathplanner::PathPlannerAuto("auto").ToPtr()
+  .AndThen(std::move(shootCommand))
+  .WithTimeout(14.5_s);
+  autoCommand.Schedule();
   time.Start();
+
+  
 }
 
 void AutonomousPeriodic() {
+  Indexer.Set(0.9);
+  frc2::CommandScheduler::GetInstance().Run();
 }
 
 void TeleopInit() {
+  autoCommand.Cancel();
   time.Stop();
   time.Reset();
 }
