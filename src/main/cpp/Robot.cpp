@@ -262,7 +262,7 @@ void RobotInit(){
   
   hopperConfig.closedLoop
     .SetFeedbackSensor(rev::spark::FeedbackSensor::kPrimaryEncoder)
-    .Pid(0.0001, 0.0, 0.0)
+    .Pid(0.01, 0.0, 0.0)
     //decrease if motor fires at full power
     .VelocityFF(0.000147)
     .IZone(0);
@@ -357,6 +357,9 @@ void RobotInit(){
     rev::spark::SparkBase::PersistMode::kPersistParameters);
   
   Hang.Configure(HangConfig, rev::spark::SparkBase::ResetMode::kResetSafeParameters,
+    rev::spark::SparkBase::PersistMode::kPersistParameters);
+
+  Hopper.Configure(hopperConfig,rev::spark::SparkBase::ResetMode::kResetSafeParameters,
     rev::spark::SparkBase::PersistMode::kPersistParameters);
   
     //rotation motors need seeding to know what angle they start at
