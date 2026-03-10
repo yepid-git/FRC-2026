@@ -693,7 +693,7 @@ void TeleopPeriodic() {
   //Resetting functionalities, MUST do at the start of every match
   //gyroscope resets when Y is pressed
   if(controller.GetYButtonPressed()){
-    ResetPose();
+    ResetPoseEstimator();
     ResetGyro();
   }
 
