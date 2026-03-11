@@ -57,7 +57,7 @@ class Robot : public frc::TimedRobot {
   double VerticalSpeed = 0.1; 
   double HorizontalSpeed = 0.2;
   double IndexerSpeed = 1;
-  double HopperSpeed = 0.7; //make negative if too fast
+  double HopperSpeed = 0.2; //make negative if too fast
   double HangSpeed = 0.5;
 
   char color = 'b'; //color variable 
@@ -248,9 +248,9 @@ void RobotInit(){
   
   shooterLeaderConfig.closedLoop
     .SetFeedbackSensor(rev::spark::FeedbackSensor::kPrimaryEncoder)
-    .Pid(0.01, 0.0, 0.0)
+    .Pid(0.005, 0.0, 0.0)
     //decrease if motor fires at full power
-    .VelocityFF(0.000147)
+    .VelocityFF(0.0147)
     .IZone(0);
 
   //sets the follower shooter to actually follow the leader
@@ -629,7 +629,7 @@ void AutonomousInit() {
   //defining my own shoot command
   frc2::CommandPtr shootCommand = 
   frc2::cmd::Run([this]() {
-      pidfiresh.SetReference(6368, rev::spark::SparkBase::ControlType::kVelocity);
+      pidfiresh.SetReference(1800, rev::spark::SparkBase::ControlType::kVelocity);
       Indexer.Set(IndexerSpeed);
   }).WithTimeout(2.0_s)
   .AndThen([this]() {
@@ -754,7 +754,7 @@ void TeleopPeriodic() {
 
   //shooter code
   //actual rpm is targetrpm * 22/15
-  double targetrpm = 6368;
+  double targetrpm = 1800;
 
   //if bumper is pressed, fire both motors at the target rpm, otherwise set their velocities to 0
   if(controller.GetRightBumper()){
