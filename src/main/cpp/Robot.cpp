@@ -242,8 +242,8 @@ void RobotInit(){
   //leader shooter config 
   shooterLeaderConfig
     .Inverted(true)
-    .OpenLoopRampRate(0.1) // seconds to full power
-    .ClosedLoopRampRate(0.1)
+    .OpenLoopRampRate(0.00) // seconds to full power
+    .ClosedLoopRampRate(0.00)
     .SetIdleMode(rev::spark::SparkBaseConfig::IdleMode::kCoast);
   
   shooterLeaderConfig.closedLoop
