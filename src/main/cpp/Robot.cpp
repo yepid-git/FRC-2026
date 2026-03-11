@@ -60,13 +60,15 @@ class Robot : public frc::TimedRobot {
   double HopperSpeed = 0.2; //make negative if too fast
   double HangSpeed = 0.5;
 
-  char color = 'b'; //color variable 
+
 
   //member for the auto command
   frc2::CommandPtr autoCommand = frc2::cmd::None();
 
   //placeholder variable for the goal hub's position on the field
-  frc::Translation2d GoalPosition{4.612_m, -4.021_m};
+  frc::Translation2d RedGoalPosition{11.612_m, 4.021_m};
+  frc::Translation2d BlueGoalPosition{4.612_m, 4.021_m};
+  frc::Translation2d GoalPosition{};
 
 
   //set location of each wheel relative to center (using WPILib's NWU axes coordinate system)
@@ -183,15 +185,11 @@ class Robot : public frc::TimedRobot {
 
 
 void RobotInit(){
-  //color change
-  auto alliance = frc::DriverStation::GetAlliance();
-  if (alliance && alliance.value() == frc::DriverStation::Alliance::kRed) {
-    color = 'r';
-  }
 
 
   LimelightHelpers::setPipelineIndex("", 0);
-  LimelightHelpers::setLEDMode_ForceOn("");
+  //i dont think the led is necessary im ngl
+  LimelightHelpers::setLEDMode_ForceOff("");
 
   //lots of configs
   //Note: TUNE PID's Later (maybe?)
@@ -286,9 +284,9 @@ void RobotInit(){
   .OutputRange(-0.4, 0.4);
 
   HorizontalTurretConfig.softLimit
-    .ForwardSoftLimit(PI)  // 180 degrees
+    .ForwardSoftLimit(PI*0.95)  // 180*0.95 degrees
     .ForwardSoftLimitEnabled(true)
-    .ReverseSoftLimit(-PI) // -180 degrees
+    .ReverseSoftLimit(-PI*0.95) // -180*0.95 degrees
     .ReverseSoftLimitEnabled(true);
 
 
@@ -546,7 +544,7 @@ void RobotPeriodic() {
 
   if (isTrustworthy) {
   poseEstimator->SetVisionMeasurementStdDevs(
-    {0.01, 0.01, 686367.69} // x, y, theta (ignore vision rotation)
+    {0.5, 0.5, 686367.69} // x, y, theta (ignore vision rotation)
   );
 
   frc::SmartDashboard::PutBoolean("mt2 is trustworthy", isTrustworthy);
@@ -622,9 +620,17 @@ void RobotPeriodic() {
 
 
 void AutonomousInit() {
+  //color change
+  auto alliance = frc::DriverStation::GetAlliance();
+  //handles flipping of coordinates 
+  if (alliance && alliance.value() == frc::DriverStation::Alliance::kRed) {
+    GoalPosition = RedGoalPosition;
+  } else {
+    GoalPosition = BlueGoalPosition;
+  }
   time.Reset();
   ResetGyro();
-  ResetPoseEstimator();
+  ResetPoseFromLimelight();
   
   //defining my own shoot command
   frc2::CommandPtr shootCommand = 
@@ -687,6 +693,14 @@ void AutonomousPeriodic() {
 
 void TeleopInit() {
   autoCommand.Cancel();
+  //color change
+  auto alliance = frc::DriverStation::GetAlliance();
+  //handles flipping of coordinates 
+  if (alliance && alliance.value() == frc::DriverStation::Alliance::kRed) {
+    GoalPosition = RedGoalPosition;
+  } else {
+    GoalPosition = BlueGoalPosition;
+  }
   time.Stop();
   time.Reset();
 }
@@ -698,8 +712,9 @@ void TeleopPeriodic() {
   //Resetting functionalities, MUST do at the start of every match
   //gyroscope resets when Y is pressed
   if(controller.GetYButtonPressed()){
-    ResetPoseEstimator();
+    //resets gyro heading, make sure robot is straight before doing this
     ResetGyro();
+    ResetPoseFromLimelight();
   }
 
   if(controller.GetBButtonPressed()){
@@ -813,6 +828,9 @@ void AlignTurret(){
   while (targetRad > PI)  targetRad -= 2.0 * PI;
   while (targetRad < -PI) targetRad += 2.0 * PI;
 
+  //clamps the value to the robots softlimits
+  targetRad = std::clamp(targetRad, -PI * 0.95, PI * 0.95);
+
   //Sets the rotational motor's angle, to that position
   HorizontalTurret.GetClosedLoopController().SetReference(
     targetRad,
@@ -820,7 +838,7 @@ void AlignTurret(){
   );
 
   //debugging utility
-  frc::SmartDashboard::PutNumber("Turret Target (Rad)", TurretTarget.Radians().value());
+  frc::SmartDashboard::PutNumber("Turret Target (Rad)", targetRad);
 
 }
 
@@ -1011,6 +1029,23 @@ wpi::array<frc::SwerveModulePosition, 4> GetSwervePositions(){
 
 }
 
+//helper function to reset pose based on limelight
+void ResetPoseFromLimelight() {
+  LimelightHelpers::PoseEstimate llPose = 
+    LimelightHelpers::getBotPoseEstimate_wpiBlue_MegaTag2("");
+
+  frc::SmartDashboard::PutBoolean("Pose Reset Used Vision: ", llPose.tagCount >= 1);
+
+  if (llPose.tagCount >= 1) {
+    poseEstimator->ResetPosition(
+      frc::Rotation2d{units::degree_t{ahrs->GetAngle()}},
+      GetSwervePositions(),
+      llPose.pose
+    );
+  } else {
+    ResetPoseEstimator();
+  }
+}
 
 void xstop(){
   //just tells the robot which angle to set everything to in order to make an x :)
