@@ -957,7 +957,7 @@ void TestPeriodic() {
     firesh.StopMotor();
   }
 
-  if(controller.GetRightBumper()){
+  if(controller.GetLeftBumper()){
   pidfiresh2.SetReference(
       6368,
       rev::spark::SparkBase::ControlType::kVelocity
