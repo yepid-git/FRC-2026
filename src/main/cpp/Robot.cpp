@@ -121,7 +121,6 @@ class Robot : public frc::TimedRobot {
   rev::spark::SparkFlex firesh2{21, rev::spark::SparkLowLevel::MotorType::kBrushless}; //Follower motor
 
   rev::spark::SparkClosedLoopController pidfiresh = firesh.GetClosedLoopController();
-  rev::spark::SparkClosedLoopController pidfiresh2 = firesh2.GetClosedLoopController();
 
   //configs for shooters
   rev::spark::SparkBaseConfig shooterLeaderConfig{};
@@ -243,26 +242,21 @@ void RobotInit(){
   //leader shooter config 
   shooterLeaderConfig
     .Inverted(true)
+    .OpenLoopRampRate(0.1) // seconds to full power
+    .ClosedLoopRampRate(0.1)
     .SetIdleMode(rev::spark::SparkBaseConfig::IdleMode::kCoast);
   
   shooterLeaderConfig.closedLoop
     .SetFeedbackSensor(rev::spark::FeedbackSensor::kPrimaryEncoder)
-    .Pid(0.0001, 0.0, 0.0)
+    .Pid(0.01, 0.0, 0.0)
     //decrease if motor fires at full power
-    .VelocityFF(0.000147)
+    .VelocityFF(0.0147)
     .IZone(0);
 
   //sets the follower shooter to actually follow the leader
   shooterFollowerConfig
-  .SetIdleMode(rev::spark::SparkBaseConfig::IdleMode::kCoast);
-  //.Follow(firesh, true);
-
-  shooterFollowerConfig.closedLoop
-    .SetFeedbackSensor(rev::spark::FeedbackSensor::kPrimaryEncoder)
-    .Pid(0.0001, 0.0, 0.0)
-    //decrease if motor fires at full power
-    .VelocityFF(0.000147)
-    .IZone(0);
+  .SetIdleMode(rev::spark::SparkBaseConfig::IdleMode::kCoast)
+  .Follow(firesh, true);
 
   hopperConfig
     .Inverted(true)
@@ -783,16 +777,20 @@ void TeleopPeriodic() {
     Hopper.Set(-HopperSpeed);
   } else {
     Indexer.StopMotor();
-    Hopper.StopMotor();
   }
 
 
     //controller triggers set indexer velocity
   if(controller.GetLeftBumper()){
    Intake.Set(-0.7);
+   Hopper.Set(HopperSpeed);
   } else {
     Intake.StopMotor();
+  }
 
+  //if neither left trigger right trigger or left bumper are pressed then stop hopper
+  if(!(controller.GetLeftBumper() || controller.GetLeftTriggerAxis() || controller.GetRightTriggerAxis())){
+    Hopper.StopMotor();
   }
 
 
@@ -948,24 +946,6 @@ void DisabledPeriodic() {}
 void TestInit() {}
 
 void TestPeriodic() {
-  if(controller.GetRightBumper()){
-  pidfiresh.SetReference(
-      6368,
-      rev::spark::SparkBase::ControlType::kVelocity
-  );
-  } else {
-    firesh.StopMotor();
-  }
-
-  if(controller.GetLeftBumper()){
-  pidfiresh2.SetReference(
-      6368,
-      rev::spark::SparkBase::ControlType::kVelocity
-  );
-  } else {
-    firesh2.StopMotor();
-  }
-  
 }
 
 void SimulationInit() {}
