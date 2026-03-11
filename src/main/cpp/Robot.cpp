@@ -250,7 +250,7 @@ void RobotInit(){
     .SetFeedbackSensor(rev::spark::FeedbackSensor::kPrimaryEncoder)
     .Pid(0.01, 0.0, 0.0)
     //decrease if motor fires at full power
-    .VelocityFF(0.0147)
+    .VelocityFF(0.000147)
     .IZone(0);
 
   //sets the follower shooter to actually follow the leader
