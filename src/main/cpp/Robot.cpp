@@ -149,7 +149,7 @@ class Robot : public frc::TimedRobot {
   rev::spark::SparkBaseConfig HangConfig{};
 
   //spindexer/hopper
-  rev::spark::SparkMax Hopper{31, rev::spark::SparkLowLevel::MotorType::kBrushless};
+  rev::spark::SparkFlex Hopper{31, rev::spark::SparkLowLevel::MotorType::kBrushless};
   rev::spark::SparkBaseConfig hopperConfig{};
   
   frc::Timer time;
@@ -510,9 +510,9 @@ void RobotInit(){
 //should probably use sig figs but im scared
 LimelightHelpers::setCameraPose_RobotSpace(
     "",
-    0.201695558,   // forward from center (positive = toward front)
-    -0.2302129,   // side offset (positive = left)
-    0.24851995,   // height from floor level of robot center
+    0.2453941752,   // forward from center (positive = toward front)
+    -0.23021288476,   // side offset (positive = left)
+    0.29895206656,   // height from floor level of robot center
     0.0,   // roll
     0.0,  // pitch (negative = tilted down toward floor)
     0.0    // yaw (0 = facing forward)
@@ -772,16 +772,16 @@ void TeleopPeriodic() {
     Hopper.Set(HopperSpeed);
   } else if (controller.GetRightTriggerAxis()){
     Indexer.Set(IndexerSpeed);
-    Hopper.Set(HopperSpeed);
+    Hopper.Set(-HopperSpeed);
   } else {
     Indexer.StopMotor();
+    Hopper.StopMotor();
   }
 
 
     //controller triggers set indexer velocity
   if(controller.GetLeftBumper()){
    Intake.Set(-0.7);
-   Hopper.Set(-HopperSpeed);
   } else {
     Intake.StopMotor();
   }
