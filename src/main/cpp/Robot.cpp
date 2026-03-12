@@ -31,6 +31,8 @@
 #include <frc/kinematics/SwerveDriveOdometry.h>
 #include <units/time.h>
 #include <frc/estimator/SwerveDrivePoseEstimator.h>
+#include <vector>
+#include <utility>
 
 //includes for auto
 #include <pathplanner/lib/auto/AutoBuilder.h>
@@ -837,6 +839,9 @@ void AlignTurret(){
   //calculate angle based on the x & y distances
   frc::Rotation2d angle = distance.Angle();
 
+  //calculate the vertical angle of the turret needed for the distance
+  double targetVertical = extrapolateAngle(distance.Norm().value());
+
   frc::Rotation2d TurretTarget = angle - pose.Rotation();
 
   //normalizing the target angle to stay within soft limits
@@ -851,6 +856,11 @@ void AlignTurret(){
   HorizontalTurret.GetClosedLoopController().SetReference(
     targetRad,
   rev::spark::SparkBase::ControlType::kPosition
+  );
+
+  VerticalTurret.GetClosedLoopController().SetReference(
+    targetVertical,
+    rev::spark::SparkBase::ControlType::kPosition
   );
 
   //debugging utility
@@ -1088,6 +1098,43 @@ frc::Rotation2d GetSafeRotation() {
         lastKnownYaw = ahrs->GetYaw(); 
     }
     return frc::Rotation2d{units::degree_t{lastKnownAngle}};
+}
+
+
+//distance angle table
+//distances go first, angles go second
+//dummy values for now, also MUST be sorted
+std::vector<std::pair<double, double>> distanceAngleTable = {
+  {1.0,  55.0},
+  {2.0,  50.0},
+  {3.0,  45.0},
+};
+
+double extrapolateAngle(double d){
+  //unlikely the list is empty, but just to be safe!
+  if (distanceAngleTable.empty()) return 45.0;
+
+  //used for out of bounds angle handling
+  if (d <= distanceAngleTable.front().first) return distanceAngleTable.front().second;
+  if (d >= distanceAngleTable.back().first)  return distanceAngleTable.back().second;
+
+  //search for the the points the distance is between
+  for (size_t i = 0; i + 1 < distanceAngleTable.size(); i++) {
+    double d0 = distanceAngleTable[i].first;
+    double d1 = distanceAngleTable[i + 1].first;
+
+    if (d >= d0 && d <= d1) {
+      // How far between d0 and d1 are we? (0.0 to 1.0)
+      double t = (d - d0) / (d1 - d0);
+      double a0 = distanceAngleTable[i].second;
+      double a1 = distanceAngleTable[i + 1].second;
+      //returns an average of the angles at the two points
+      return a0 + t * (a1 - a0);
+    }
+  }
+  
+  //returns the last angle if the value isn't between any known distances
+  return distanceAngleTable.back().second;
 }
 
 };
