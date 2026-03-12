@@ -243,7 +243,7 @@ void RobotInit(){
 
   //leader shooter config 
   shooterLeaderConfig
-  .VoltageCompensation(10.0);
+    .VoltageCompensation(10.0)
     .Inverted(true)
     .OpenLoopRampRate(0.00) // seconds to full power
     .ClosedLoopRampRate(0.00)
@@ -745,12 +745,12 @@ void TeleopPeriodic() {
     HorizontalTurret.Set(-HorizontalSpeed);
   } else if (controller.GetPOV() == 180){
     //down TEMPORARY REMOVAL OF VERTICAL TURRET
-    //VerticalTurret.Set(VerticalSpeed);
-    Hang.Set(-HangSpeed);
+    VerticalTurret.Set(VerticalSpeed);
+    //Hang.Set(-HangSpeed);
   } else if (controller.GetPOV() == 0){
     //up TEMPORARY REMOVAL OF VERTICAL TURRET
-    //VerticalTurret.Set(-VerticalSpeed);
-    Hang.Set(HangSpeed);
+    VerticalTurret.Set(-VerticalSpeed);
+    //Hang.Set(HangSpeed);
   } else if (controller.GetStartButton()) {
     HorizontalTurret.GetEncoder().SetPosition(0);
   } else { //ensures autoalignment and manual turret movement are mutually exclusive
@@ -782,7 +782,7 @@ void TeleopPeriodic() {
 
   //shooter code
   //actual rpm is targetrpm * 22/15
-  double targetrpm = 1800;
+  double targetrpm = 2000;
 
   //if bumper is pressed, fire both motors at the target rpm, otherwise set their velocities to 0
   if(controller.GetRightBumper()){
