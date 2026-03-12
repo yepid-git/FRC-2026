@@ -243,6 +243,7 @@ void RobotInit(){
 
   //leader shooter config 
   shooterLeaderConfig
+  .VoltageCompensation(10.0);
     .Inverted(true)
     .OpenLoopRampRate(0.00) // seconds to full power
     .ClosedLoopRampRate(0.00)
@@ -251,10 +252,9 @@ void RobotInit(){
   shooterLeaderConfig.closedLoop
     .SetFeedbackSensor(rev::spark::FeedbackSensor::kPrimaryEncoder)
     .Pid(0.005, 0.0, 0.0)
-    //decrease if motor fires at full power
-    .VelocityFF(0.0147)
+    .VelocityFF(0.000147)
     //limit voltage
-    .OutputRange(-0.5, 0.5)
+    //.OutputRange(-0.5, 0.5)
     .IZone(0);
 
   //sets the follower shooter to actually follow the leader
@@ -310,7 +310,7 @@ void RobotInit(){
     .PositionConversionFactor((2.0 * PI) / 36 * 4) // 36:1 Gearbox ratio
     .VelocityConversionFactor(((2.0 * PI) / 36 * 4) / 60.0);
 
-    
+
   IndexerConfig
     .Inverted(false) // flip to true if it runs backwards
     .SetIdleMode(rev::spark::SparkBaseConfig::IdleMode::kBrake);
