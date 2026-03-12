@@ -541,6 +541,9 @@ void RobotPeriodic() {
     0, 0, 0, 0, 0 //sets yawrate, pitch, pitchrate, and roll to 0
   );
 
+  LimelightHelpers::PoseEstimate testPose = LimelightHelpers::getBotPoseEstimate_wpiBlue_MegaTag2("");
+  frc::SmartDashboard::PutBoolean("Limelight Reachable: ", testPose.timestampSeconds.value() > 0);
+
   LimelightHelpers::PoseEstimate mt2;
 
   //if(color == 'b'){
