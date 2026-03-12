@@ -57,7 +57,7 @@ class Robot : public frc::TimedRobot {
   double VerticalSpeed = 0.1; 
   double HorizontalSpeed = 0.2;
   double IndexerSpeed = 1;
-  double HopperSpeed = 0.6; 
+  double HopperSpeed = 0.2; 
   double HangSpeed = 0.5;
 
   //member for the last known angle, avoid bad gyro readings during disconnections (if happens)
