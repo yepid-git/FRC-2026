@@ -57,7 +57,7 @@ class Robot : public frc::TimedRobot {
   double VerticalSpeed = 0.1; 
   double HorizontalSpeed = 0.2;
   double IndexerSpeed = 1;
-  double HopperSpeed = 0.2; //make negative if too fast
+  double HopperSpeed = 0.6; 
   double HangSpeed = 0.5;
 
   //member for the last known angle, avoid bad gyro readings during disconnections (if happens)
@@ -251,7 +251,7 @@ void RobotInit(){
   
   shooterLeaderConfig.closedLoop
     .SetFeedbackSensor(rev::spark::FeedbackSensor::kPrimaryEncoder)
-    .Pid(0.005, 0.0, 0.0)
+    .Pid(0.001, 0.0, 0.0)
     .VelocityFF(0.000147)
     //limit voltage
     //.OutputRange(-0.5, 0.5)
