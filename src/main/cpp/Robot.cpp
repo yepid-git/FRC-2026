@@ -525,7 +525,7 @@ LimelightHelpers::setCameraPose_RobotSpace(
     0.29895206656,   // height from floor level of robot center
     0.0,   // roll
     0.0,  // pitch (negative = tilted down toward floor)
-    0.0    // yaw (0 = facing forward)
+    180    // yaw (0 = facing forward)
 );
 
 }
