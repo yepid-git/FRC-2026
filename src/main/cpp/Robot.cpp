@@ -60,6 +60,10 @@ class Robot : public frc::TimedRobot {
   double HopperSpeed = 0.2; //make negative if too fast
   double HangSpeed = 0.5;
 
+  //member for the last known angle, avoid bad gyro readings during disconnections (if happens)
+  double lastKnownAngle = 0.0;
+  double lastKnownYaw = 0.0;  
+
 
 
   //member for the auto command
@@ -488,7 +492,7 @@ void RobotInit(){
     [this]() { return poseEstimator->GetEstimatedPosition(); },
     [this](frc::Pose2d pose) {
         poseEstimator->ResetPosition(
-            frc::Rotation2d{units::degree_t{ahrs->GetAngle()}},
+            frc::Rotation2d{units::degree_t{lastKnownAngle}},
             GetSwervePositions(),
             pose
         );
@@ -523,10 +527,11 @@ LimelightHelpers::setCameraPose_RobotSpace(
 
 
 void RobotPeriodic() {
+  GetSafeRotation(); // updates lastKnownAngle cache
   UpdatePose();
   LimelightHelpers::SetRobotOrientation(
     "",
-    ahrs->GetYaw(),
+    lastKnownYaw,
     0, 0, 0, 0, 0 //sets yawrate, pitch, pitchrate, and roll to 0
   );
 
@@ -540,7 +545,8 @@ void RobotPeriodic() {
   } */
 
   //only trust megatag when there is at least one tag, and the robot isn't rotating at unreasonable speed
-  bool isTrustworthy = mt2.tagCount >= 1 && std::abs(ahrs->GetRate()) < 720.0; 
+  bool gyroHealthy = ahrs->IsConnected() && !ahrs->IsCalibrating();
+  bool isTrustworthy = mt2.tagCount >= 1 && std::abs(ahrs->GetRate()) < 720.0 && gyroHealthy; 
 
   if (isTrustworthy) {
   poseEstimator->SetVisionMeasurementStdDevs(
@@ -881,7 +887,7 @@ void Drive(double x, double y, double rotate){
 
   
   //rot2d reflects the AHRS gyroscope orientation
-  frc::Rotation2d rot2d{units::degree_t{ahrs->GetAngle()}};
+  frc::Rotation2d rot2d{units::degree_t{lastKnownAngle}};
 
   //bunch of debugging utilities
   frc::SmartDashboard::PutNumber("Drive:x", x);
@@ -978,7 +984,7 @@ void ResetGyro() {
 //reset odometry
 void ResetPoseEstimator() {
   poseEstimator->ResetPosition(
-  frc::Rotation2d{units::degree_t{ahrs->GetAngle()}}, 
+  frc::Rotation2d{units::degree_t{lastKnownAngle}}, 
   GetSwervePositions(),
   frc::Pose2d{0_m, 0_m, 0_rad}
   );
@@ -995,7 +1001,7 @@ void UpdatePose(){
   */
 
   pose = poseEstimator->Update(
-    frc::Rotation2d{units::degree_t{ahrs->GetAngle()}},
+    frc::Rotation2d{units::degree_t{lastKnownAngle}},
     GetSwervePositions()
   );
 
@@ -1038,7 +1044,7 @@ void ResetPoseFromLimelight() {
 
   if (llPose.tagCount >= 1) {
     poseEstimator->ResetPosition(
-      frc::Rotation2d{units::degree_t{ahrs->GetAngle()}},
+      frc::Rotation2d{units::degree_t{lastKnownAngle}},
       GetSwervePositions(),
       llPose.pose
     );
@@ -1064,6 +1070,16 @@ void xstop(){
   //no you cannot store the closed loop controllers as variables
   //actually you can. note: simplify ts later 
 }
+
+//navx safeguard
+frc::Rotation2d GetSafeRotation() {
+    if (ahrs->IsConnected() && !ahrs->IsCalibrating()) {
+        lastKnownAngle = ahrs->GetAngle();
+        lastKnownYaw = ahrs->GetYaw(); 
+    }
+    return frc::Rotation2d{units::degree_t{lastKnownAngle}};
+}
+
 };
 
 #ifndef RUNNING_FRC_TESTS
