@@ -253,6 +253,8 @@ void RobotInit(){
     .Pid(0.005, 0.0, 0.0)
     //decrease if motor fires at full power
     .VelocityFF(0.0147)
+    //limit voltage
+    .OutputRange(-0.5, 0.5)
     .IZone(0);
 
   //sets the follower shooter to actually follow the leader
@@ -308,6 +310,10 @@ void RobotInit(){
     .PositionConversionFactor((2.0 * PI) / 36 * 4) // 36:1 Gearbox ratio
     .VelocityConversionFactor(((2.0 * PI) / 36 * 4) / 60.0);
 
+    
+  IndexerConfig
+    .Inverted(false) // flip to true if it runs backwards
+    .SetIdleMode(rev::spark::SparkBaseConfig::IdleMode::kBrake);
   
   IndexerConfig.closedLoop
   .SetFeedbackSensor(rev::spark::FeedbackSensor::kPrimaryEncoder)
@@ -545,6 +551,7 @@ void RobotPeriodic() {
   } */
 
   //only trust megatag when there is at least one tag, and the robot isn't rotating at unreasonable speed
+  //also ensures megatag is trustworthy only when the gyro is healthy
   bool gyroHealthy = ahrs->IsConnected() && !ahrs->IsCalibrating();
   bool isTrustworthy = mt2.tagCount >= 1 && std::abs(ahrs->GetRate()) < 720.0 && gyroHealthy; 
 
