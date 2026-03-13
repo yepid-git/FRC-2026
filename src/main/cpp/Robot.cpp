@@ -286,10 +286,10 @@ void RobotInit(){
 
   HorizontalTurretConfig.closedLoop
   .SetFeedbackSensor(rev::spark::FeedbackSensor::kPrimaryEncoder)
-  .Pid(0.4, 0.0, 0.0)
+  .Pid(0.8, 0.0, 0.05)
   .PositionWrappingEnabled(false) //experiment
   .PositionWrappingInputRange(-PI, PI)
-  .OutputRange(-0.1, 0.1);
+  .OutputRange(-0.9, 0.9);
 
   HorizontalTurretConfig.softLimit
     .ForwardSoftLimit(PI*0.95)  // 180*0.95 degrees
