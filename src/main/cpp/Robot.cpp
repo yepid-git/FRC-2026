@@ -57,7 +57,7 @@ class Robot : public frc::TimedRobot {
 
   //vertical and horizontal turret
   double VerticalSpeed = 0.1; 
-  double HorizontalSpeed = 0.2;
+  double HorizontalSpeed = 0.1;
   double IndexerSpeed = 1;
   double HopperSpeed = 0.2; 
   double HangSpeed = 0.5;
@@ -72,8 +72,8 @@ class Robot : public frc::TimedRobot {
   frc2::CommandPtr autoCommand = frc2::cmd::None();
 
   //placeholder variable for the goal hub's position on the field
-  frc::Translation2d RedGoalPosition{11.612_m, 4.021_m};
-  frc::Translation2d BlueGoalPosition{4.612_m, 4.021_m};
+  frc::Translation2d RedGoalPosition{11.612_m, 4.5_m};
+  frc::Translation2d BlueGoalPosition{4.612_m, 4.5_m};
   frc::Translation2d GoalPosition{};
 
 
@@ -286,10 +286,10 @@ void RobotInit(){
 
   HorizontalTurretConfig.closedLoop
   .SetFeedbackSensor(rev::spark::FeedbackSensor::kPrimaryEncoder)
-  .Pid(0.2, 0.0, 0.0)
+  .Pid(0.4, 0.0, 0.0)
   .PositionWrappingEnabled(false) //experiment
   .PositionWrappingInputRange(-PI, PI)
-  .OutputRange(-0.4, 0.4);
+  .OutputRange(-0.1, 0.1);
 
   HorizontalTurretConfig.softLimit
     .ForwardSoftLimit(PI*0.95)  // 180*0.95 degrees
@@ -326,7 +326,7 @@ void RobotInit(){
   .SetFeedbackSensor(rev::spark::FeedbackSensor::kPrimaryEncoder)
   .Pid(0.3, 0.0, 0.0)
   .PositionWrappingEnabled(false)
-  .OutputRange(-0.5, 0.5);
+  .OutputRange(-0.75, 0.75);
 
   //setting configurations for wheel and rotational motors
   wheelfl.Configure(driveConfig, rev::spark::SparkMax::ResetMode::kResetSafeParameters,
@@ -384,7 +384,7 @@ void RobotInit(){
   double floff = 0.5;
   double froff = 0.14;
   double bloff = -0.1;
-  double broff = 0;
+  double broff = -0.25;
 
 
   rotfl.GetEncoder().SetPosition((encfl.Get() + floff) * 2.0 * PI);
@@ -606,7 +606,7 @@ void RobotPeriodic() {
   frc::SmartDashboard::PutBoolean("NavX Connected", ahrs->IsConnected());
   frc::SmartDashboard::PutBoolean("NavX Calibrating", ahrs->IsCalibrating());
 
-  frc::Translation2d distance = GoalPosition - position.Translation();
+  frc::Translation2d distance =  position.Translation() - GoalPosition;
   frc::SmartDashboard::PutNumber("Distance from goal (x): ", distance.X().value());
   frc::SmartDashboard::PutNumber("Distance from goal (y): ", distance.Y().value());
   frc::SmartDashboard::PutNumber("Distance from goal (overall): ", distance.Norm().value());
@@ -655,7 +655,7 @@ void AutonomousInit() {
   frc2::cmd::Run([this]() {
       pidfiresh.SetReference(1800, rev::spark::SparkBase::ControlType::kVelocity);
       Indexer.Set(IndexerSpeed);
-  }).WithTimeout(2.0_s)
+  }).WithTimeout(5.0_s)
   .AndThen([this]() {
       firesh.StopMotor();
       Indexer.StopMotor();
@@ -664,7 +664,7 @@ void AutonomousInit() {
 
   frc2::CommandPtr intakeCommand = 
   frc2::cmd::Run([this]() {
-      Intake.Set(-0.8);
+      Intake.Set(-1);
   });
 
   frc2::CommandPtr alignTurretCommand = 
@@ -688,7 +688,8 @@ void AutonomousInit() {
   auto path1b = pathplanner::PathPlannerPath::fromPathFile("blue path 1 b");
   
   //first, path to center runs alone
-  autoCommand = pathplanner::AutoBuilder::followPath(path1c)
+  autoCommand = std::move(shootCommand)
+  .AndThen(pathplanner::AutoBuilder::followPath(path1c))
   //next, the path to intake, as well as the intake commands run simultaneously
   .AndThen(pathplanner::AutoBuilder::followPath(path1i).DeadlineFor(std::move(intakeCommand)))
   //the robot takes the path back, while aligning the turret
@@ -834,7 +835,7 @@ void TeleopPeriodic() {
 void AlignTurret(){
   //calculate distance from robot to goal
   frc::Translation2d poseTranslation = pose.Translation();
-  frc::Translation2d distance = GoalPosition - poseTranslation;
+  frc::Translation2d distance = poseTranslation - GoalPosition;
 
   //calculate angle based on the x & y distances
   frc::Rotation2d angle = distance.Angle();
@@ -844,13 +845,17 @@ void AlignTurret(){
 
   frc::Rotation2d TurretTarget = angle - pose.Rotation();
 
+  frc::SmartDashboard::PutNumber("Turret Target: ", TurretTarget.Radians().value());
+
   //normalizing the target angle to stay within soft limits
-  double targetRad = TurretTarget.Radians().value();
+  double targetRad = -TurretTarget.Radians().value();
   while (targetRad > PI)  targetRad -= 2.0 * PI;
   while (targetRad < -PI) targetRad += 2.0 * PI;
 
   //clamps the value to the robots softlimits
   targetRad = std::clamp(targetRad, -PI * 0.95, PI * 0.95);
+
+  frc::SmartDashboard::PutNumber("Target Rad: ", targetRad);
 
   //Sets the rotational motor's angle, to that position
   HorizontalTurret.GetClosedLoopController().SetReference(
@@ -858,10 +863,10 @@ void AlignTurret(){
   rev::spark::SparkBase::ControlType::kPosition
   );
 
-  VerticalTurret.GetClosedLoopController().SetReference(
-    targetVertical,
-    rev::spark::SparkBase::ControlType::kPosition
-  );
+  //VerticalTurret.GetClosedLoopController().SetReference(
+    //targetVertical,
+    //rev::spark::SparkBase::ControlType::kPosition
+  //);
 
   //debugging utility
   frc::SmartDashboard::PutNumber("Turret Target (Rad)", targetRad);
