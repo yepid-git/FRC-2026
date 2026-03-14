@@ -299,10 +299,10 @@ void RobotInit(){
 
   HorizontalTurretConfig.softLimit
     //.ForwardSoftLimit((-PI/2) + 3.318 - 0.1)  // 180*0.95 degrees
-    .ForwardSoftLimit(3)
+    .ForwardSoftLimit(PI/2)
     .ForwardSoftLimitEnabled(true)
     //.ReverseSoftLimit((-PI/2)-0.789 + 0.1) // before
-    .ReverseSoftLimit(-0.6) 
+    .ReverseSoftLimit((-3*PI)/4) 
     .ReverseSoftLimitEnabled(true);
 
 
@@ -650,7 +650,7 @@ void AutonomousInit() {
     ResetGyro();
     ResetPoseFromLimelight();
     VerticalTurret.GetEncoder().SetPosition(45);
-    HorizontalTurret.GetEncoder().SetPosition(-PI/2+PI/4);
+    HorizontalTurret.GetEncoder().SetPosition(-PI/2);
 
   //color change
   auto alliance = frc::DriverStation::GetAlliance();
@@ -803,7 +803,7 @@ void TeleopPeriodic() {
     ResetGyro();
     ResetPoseFromLimelight();
     VerticalTurret.GetEncoder().SetPosition(45);
-    HorizontalTurret.GetEncoder().SetPosition(-PI/2+PI/4);
+    HorizontalTurret.GetEncoder().SetPosition(-PI/2);
   }
 
   /*
@@ -842,9 +842,11 @@ void TeleopPeriodic() {
   //hopper code
   if (controller2.GetRightTriggerAxis()){
     Hopper.Set(HopperSpeed);
-  } else if (controller2.GetLeftTriggerAxis()){
+  } 
+  if (controller2.GetLeftTriggerAxis()){
     Hopper.Set(-HopperSpeed);
-  } else {
+  } 
+  if (!controller2.GetLeftTriggerAxis() && !controller2.GetRightTriggerAxis()) {
     Hopper.StopMotor();
   }
 
