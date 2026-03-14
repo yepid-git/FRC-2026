@@ -18,6 +18,7 @@
 #include <cameraserver/CameraServer.h>
 #include <frc/Timer.h>
 #include <units/velocity.h>
+//#include <units/angle.h>
 #include <frc/BuiltInAccelerometer.h>
 #include <frc/PneumaticsModuleType.h>
 #include <rev/SparkClosedLoopController.h>
@@ -59,7 +60,7 @@ class Robot : public frc::TimedRobot {
   double VerticalSpeed = 0.1; 
   double HorizontalSpeed = 0.1;
   double IndexerSpeed = 1;
-  double HopperSpeed = 0.2; 
+  double HopperSpeed = 0.4; 
   double HangSpeed = 0.5;
 
   //member for the last known angle, avoid bad gyro readings during disconnections (if happens)
@@ -180,7 +181,9 @@ class Robot : public frc::TimedRobot {
   frc::SlewRateLimiter<units::meters_per_second> limitx{3_mps / .5_s};
   frc::SlewRateLimiter<units::meters_per_second> limity{3_mps / .5_s};
   frc::SlewRateLimiter<units::radians_per_second> limitrot{3_rad_per_s / .5_s};
-  frc::SlewRateLimiter<units::radians> limitturretturn{3_rad / .5_s};
+  //frc::SlewRateLimiter<units::radian_t> turretlimit{3_rad / 1_s};
+  frc::SlewRateLimiter<units::radians> turretlimit{0.5_rad / 1_s};
+  //frc::SlewRateLimiter<double> limitturretturn{3.0}; // 3 radians per second (i think - Alex Wang 0314)
 
   //Controller Mode Variables
   bool m_manual_mode = true;
@@ -196,7 +199,7 @@ void RobotInit(){
 
   LimelightHelpers::setPipelineIndex("", 0);
   //i dont think the led is necessary im ngl
-  LimelightHelpers::setLEDMode_ForceOff("");
+  LimelightHelpers::setLEDMode_ForceOn("");
 
   //lots of configs
   //Note: TUNE PID's Later (maybe?)
@@ -287,15 +290,17 @@ void RobotInit(){
 
   HorizontalTurretConfig.closedLoop
   .SetFeedbackSensor(rev::spark::FeedbackSensor::kPrimaryEncoder)
-  .Pid(0.8, 0.0, 0.05)
+  .Pid(0.3, 0.0, 0.0)
   .PositionWrappingEnabled(false) //experiment
   .PositionWrappingInputRange(-PI, PI)
   .OutputRange(-0.9, 0.9);
 
   HorizontalTurretConfig.softLimit
-    .ForwardSoftLimit((-PI/2) + 3.318 - 0.1)  // 180*0.95 degrees
+    //.ForwardSoftLimit((-PI/2) + 3.318 - 0.1)  // 180*0.95 degrees
+    .ForwardSoftLimit(3)
     .ForwardSoftLimitEnabled(true)
-    .ReverseSoftLimit((-PI/2)-0.789 + 0.1) // 
+    //.ReverseSoftLimit((-PI/2)-0.789 + 0.1) // before
+    .ReverseSoftLimit(-0.6) 
     .ReverseSoftLimitEnabled(true);
 
 
@@ -651,6 +656,9 @@ void AutonomousInit() {
   ResetGyro();
   ResetPoseFromLimelight();
   
+  VerticalTurret.GetEncoder().SetPosition(45);
+  HorizontalTurret.GetEncoder().SetPosition(-PI/2+PI/4); //starting position is -90 degrees
+  
   //defining my own shoot command
   frc2::CommandPtr shootCommand = 
   frc2::cmd::Run([this]() {
@@ -731,6 +739,8 @@ void TeleopPeriodic() {
 
   //Resetting functionalities, MUST do at the start of every match
   //gyroscope resets when Y is pressed
+  //moved into start of auto but kept here if needed during tele
+  
   if(controller.GetYButtonPressed()){
     //resets gyro heading, make sure robot is straight before doing this
     ResetGyro();
@@ -739,9 +749,8 @@ void TeleopPeriodic() {
 
   if(controller.GetBButtonPressed()){
     VerticalTurret.GetEncoder().SetPosition(45);
-    HorizontalTurret.GetEncoder().SetPosition(-PI/2); //starting position is -90 degrees
+    HorizontalTurret.GetEncoder().SetPosition(-PI/2+PI/4); //starting position is -90 degrees
   }
-
 
   //Sets turret position to zero, and limtis rotational movement.
   if (controller.GetPOV() == 90) {
@@ -836,15 +845,15 @@ void TeleopPeriodic() {
 void AlignTurret(){
   //calculate distance from robot to goal
   frc::Translation2d poseTranslation = pose.Translation();
-  frc::Translation2d distance = GoalPosition - poseTranslation;
+  frc::Translation2d distance = poseTranslation - GoalPosition;
 
   //calculate angle based on the x & y distances
   frc::Rotation2d angle = distance.Angle();
 
   //calculate the vertical angle of the turret needed for the distance
-  //double targetVertical = extrapolateAngle(distance.Norm().value());
+  double targetVertical = extrapolateAngle(distance.Norm().value());
 
-  frc::Rotation2d TurretTarget = angle - pose.Rotation() - frc::Rotation2d{units::radian_t{PI}};
+  frc::Rotation2d TurretTarget = angle - pose.Rotation();
 
   frc::SmartDashboard::PutNumber("Turret Target: ", TurretTarget.Radians().value());
 
@@ -854,14 +863,21 @@ void AlignTurret(){
   while (targetRad < -PI) targetRad += 2.0 * PI;
 
   //clamps the value to the robots softlimits
-  targetRad = std::clamp(targetRad, -2.260, 1.647);
+  targetRad = std::clamp(targetRad, -PI * 0.95, PI * 0.95);
+
+  //insert slew rate limiter!
+  //targetRad = limitturretturn.Calculate(units::radian_t(targetRad));
+  units::radian_t targetRad_unit{targetRad};
 
   frc::SmartDashboard::PutNumber("Target Rad: ", targetRad);
+  frc::SmartDashboard::PutNumber("Butt: ", double(turretlimit.Calculate(targetRad_unit)));
 
   //Sets the rotational motor's angle, to that position
   HorizontalTurret.GetClosedLoopController().SetReference(
-    targetRad,
-  rev::spark::SparkBase::ControlType::kPosition
+    //turretlimit.Calculate(units::radians{targetRad}),
+    double(turretlimit.Calculate(targetRad_unit)),
+    //targetRad,
+    rev::spark::SparkBase::ControlType::kPosition
   );
 
   //VerticalTurret.GetClosedLoopController().SetReference(
