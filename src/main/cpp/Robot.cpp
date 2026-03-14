@@ -858,7 +858,10 @@ void TeleopPeriodic() {
 void AlignTurret(){
   //calculate distance from robot to goal
   frc::Translation2d poseTranslation = pose.Translation();
-  frc::Translation2d distance = poseTranslation - GoalPosition;
+  //frc::Translation2d distance = poseTranslation - GoalPosition;
+
+  //alternative aim
+  frc::Translation2d distance = GoalPosition - poseTranslation;
 
   //calculate angle based on the x & y distances
   frc::Rotation2d angle = distance.Angle();
@@ -866,7 +869,7 @@ void AlignTurret(){
   //calculate the vertical angle of the turret needed for the distance
   double targetVertical = extrapolateAngle(distance.Norm().value());
 
-  frc::Rotation2d TurretTarget = angle - pose.Rotation();
+  frc::Rotation2d TurretTarget = angle - pose.Rotation() - units::radian_t(PI);
 
   frc::SmartDashboard::PutNumber("Turret Target: ", TurretTarget.Radians().value());
 
