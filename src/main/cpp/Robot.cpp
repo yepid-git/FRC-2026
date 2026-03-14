@@ -18,6 +18,7 @@
 #include <cameraserver/CameraServer.h>
 #include <frc/Timer.h>
 #include <units/velocity.h>
+//#include <units/angle.h>
 #include <frc/BuiltInAccelerometer.h>
 #include <frc/PneumaticsModuleType.h>
 #include <rev/SparkClosedLoopController.h>
@@ -59,8 +60,9 @@ class Robot : public frc::TimedRobot {
   double VerticalSpeed = 0.1; 
   double HorizontalSpeed = 0.1;
   double IndexerSpeed = 1;
-  double HopperSpeed = 0.2; 
+  double HopperSpeed = 0.4; 
   double HangSpeed = 0.5;
+  double IntakeSpeed = 0.7;
 
   //member for the last known angle, avoid bad gyro readings during disconnections (if happens)
   double lastKnownAngle = 0.0;
@@ -173,14 +175,16 @@ class Robot : public frc::TimedRobot {
   frc::SwerveDriveKinematics<4> kinematics{
     m_frontLeftLocation, m_frontRightLocation, m_backLeftLocation,
         m_backRightLocation};
-  frc::XboxController controller{0};
-  //frc::XboxController controller2{1}; maybe use later
+  frc::XboxController controller{0}; //1st controller: drive, intake, indexer, reset functionalities
+  frc::XboxController controller2{1}; //2nd controller: shoot wheels, horizontal & vertical turret, auto turret, hopper (forwards/backwards)
 
   //limits acceleration to 6m/s^2
   frc::SlewRateLimiter<units::meters_per_second> limitx{3_mps / .5_s};
   frc::SlewRateLimiter<units::meters_per_second> limity{3_mps / .5_s};
   frc::SlewRateLimiter<units::radians_per_second> limitrot{3_rad_per_s / .5_s};
-  frc::SlewRateLimiter<units::radians> limitturretturn{3_rad / .5_s};
+  //frc::SlewRateLimiter<units::radian_t> turretlimit{3_rad / 1_s};
+  frc::SlewRateLimiter<units::radians> turretlimit{0.5_rad / 1_s};
+  //frc::SlewRateLimiter<double> limitturretturn{3.0}; // 3 radians per second (i think - Alex Wang 0314)
 
   //Controller Mode Variables
   bool m_manual_mode = true;
@@ -196,7 +200,7 @@ void RobotInit(){
 
   LimelightHelpers::setPipelineIndex("", 0);
   //i dont think the led is necessary im ngl
-  LimelightHelpers::setLEDMode_ForceOff("");
+  LimelightHelpers::setLEDMode_ForceOn("");
 
   //lots of configs
   //Note: TUNE PID's Later (maybe?)
@@ -287,15 +291,17 @@ void RobotInit(){
 
   HorizontalTurretConfig.closedLoop
   .SetFeedbackSensor(rev::spark::FeedbackSensor::kPrimaryEncoder)
-  .Pid(0.8, 0.0, 0.05)
+  .Pid(0.3, 0.0, 0.0)
   .PositionWrappingEnabled(false) //experiment
   .PositionWrappingInputRange(-PI, PI)
   .OutputRange(-0.9, 0.9);
 
   HorizontalTurretConfig.softLimit
-    .ForwardSoftLimit((-PI/2) + 3.318 - 0.1)  // 180*0.95 degrees
+    //.ForwardSoftLimit((-PI/2) + 3.318 - 0.1)  // 180*0.95 degrees
+    .ForwardSoftLimit(3)
     .ForwardSoftLimitEnabled(true)
-    .ReverseSoftLimit((-PI/2)-0.789 + 0.1) // 
+    //.ReverseSoftLimit((-PI/2)-0.789 + 0.1) // before
+    .ReverseSoftLimit(-0.6) 
     .ReverseSoftLimitEnabled(true);
 
 
@@ -639,6 +645,12 @@ void RobotPeriodic() {
 
 
 void AutonomousInit() {
+
+    ResetGyro();
+    ResetPoseFromLimelight();
+    VerticalTurret.GetEncoder().SetPosition(45);
+    HorizontalTurret.GetEncoder().SetPosition(-PI/2+PI/4);
+
   //color change
   auto alliance = frc::DriverStation::GetAlliance();
   //handles flipping of coordinates 
@@ -650,6 +662,9 @@ void AutonomousInit() {
   time.Reset();
   ResetGyro();
   ResetPoseFromLimelight();
+  
+  VerticalTurret.GetEncoder().SetPosition(45);
+  HorizontalTurret.GetEncoder().SetPosition(-PI/2+PI/4); //starting position is -90 degrees
   
   //defining my own shoot command
   frc2::CommandPtr shootCommand = 
@@ -671,7 +686,7 @@ void AutonomousInit() {
   frc2::CommandPtr alignTurretCommand = 
   frc2::cmd::Run([this]() {
       AlignTurret();
-  });
+  }).WithTimeout(0.5_s);
 
   frc2::CommandPtr spinFlywheelCommand = 
   frc2::cmd::Run([this]() {
@@ -689,7 +704,8 @@ void AutonomousInit() {
   auto path1b = pathplanner::PathPlannerPath::fromPathFile("blue path 1 b");
   
   //first, path to center runs alone
-  autoCommand = std::move(shootCommand)
+  autoCommand = std::move(alignTurretCommand)
+  .AndThen(std::move(shootCommand))
   .AndThen(pathplanner::AutoBuilder::followPath(path1c))
   //next, the path to intake, as well as the intake commands run simultaneously
   .AndThen(pathplanner::AutoBuilder::followPath(path1i).DeadlineFor(std::move(intakeCommand)))
@@ -731,44 +747,56 @@ void TeleopPeriodic() {
 
   //Resetting functionalities, MUST do at the start of every match
   //gyroscope resets when Y is pressed
+  //moved into start of auto but kept here if needed during tele
+  
   if(controller.GetYButtonPressed()){
     //resets gyro heading, make sure robot is straight before doing this
     ResetGyro();
     ResetPoseFromLimelight();
+    VerticalTurret.GetEncoder().SetPosition(45);
+    HorizontalTurret.GetEncoder().SetPosition(-PI/2+PI/4);
   }
 
+  /*
   if(controller.GetBButtonPressed()){
     VerticalTurret.GetEncoder().SetPosition(45);
-    HorizontalTurret.GetEncoder().SetPosition(-PI/2); //starting position is -90 degrees
+    HorizontalTurret.GetEncoder().SetPosition(-PI/2+PI/4); //starting position is -90 degrees MIGHT CHANGE
   }
-
+  */
 
   //Sets turret position to zero, and limtis rotational movement.
-  if (controller.GetPOV() == 90) {
+  if (controller2.GetPOV() == 90) {
     //right
     HorizontalTurret.Set(HorizontalSpeed);
-  } else if (controller.GetPOV() == 270){
+  } else if (controller2.GetPOV() == 270){
     //left
     HorizontalTurret.Set(-HorizontalSpeed);
-  } else if (controller.GetPOV() == 180){
+  } else if (controller2.GetPOV() == 180){
     //down TEMPORARY REMOVAL OF VERTICAL TURRET
     VerticalTurret.Set(VerticalSpeed);
     //Hang.Set(-HangSpeed);
-  } else if (controller.GetPOV() == 0){
+  } else if (controller2.GetPOV() == 0){
     //up TEMPORARY REMOVAL OF VERTICAL TURRET
     VerticalTurret.Set(-VerticalSpeed);
     //Hang.Set(HangSpeed);
-  } else if (controller.GetStartButton()) {
-    HorizontalTurret.GetEncoder().SetPosition(0);
   } else { //ensures autoalignment and manual turret movement are mutually exclusive
-    if(controller.GetAButton()){
+    if(controller2.GetAButton()){
       AlignTurret();
     } else {
       HorizontalTurret.StopMotor();
       VerticalTurret.StopMotor();
       Hang.StopMotor();
     }
+  }
 
+
+  //hopper code
+  if (controller2.GetRightTriggerAxis()){
+    Hopper.Set(HopperSpeed);
+  } else if (controller2.GetLeftTriggerAxis()){
+    Hopper.Set(-HopperSpeed);
+  } else {
+    Hopper.StopMotor();
   }
 
 
@@ -792,7 +820,7 @@ void TeleopPeriodic() {
   double targetrpm = 1700;
 
   //if bumper is pressed, fire both motors at the target rpm, otherwise set their velocities to 0
-  if(controller.GetRightBumper()){
+  if(controller2.GetXButton()){
   pidfiresh.SetReference(
       targetrpm,
       rev::spark::SparkBase::ControlType::kVelocity
@@ -806,26 +834,20 @@ void TeleopPeriodic() {
   //controller triggers set indexer velocity
   if(controller.GetLeftTriggerAxis()){
     Indexer.Set(-IndexerSpeed);
-    Hopper.Set(HopperSpeed);
   } else if (controller.GetRightTriggerAxis()){
     Indexer.Set(IndexerSpeed);
-    Hopper.Set(-HopperSpeed);
   } else {
     Indexer.StopMotor();
   }
 
 
-    //controller triggers set indexer velocity
+  //controller triggers set indexer velocity
   if(controller.GetLeftBumper()){
-   Intake.Set(-0.7);
-   Hopper.Set(HopperSpeed);
-  } else {
+   Intake.Set(-IntakeSpeed);
+  } else if (controller.GetRightBumper()){
+    Intake.Set(IntakeSpeed);
+  } else { 
     Intake.StopMotor();
-  }
-
-  //if neither left trigger right trigger or left bumper are pressed then stop hopper
-  if(!(controller.GetLeftBumper() || controller.GetLeftTriggerAxis() || controller.GetRightTriggerAxis())){
-    Hopper.StopMotor();
   }
 
 
@@ -836,15 +858,15 @@ void TeleopPeriodic() {
 void AlignTurret(){
   //calculate distance from robot to goal
   frc::Translation2d poseTranslation = pose.Translation();
-  frc::Translation2d distance = GoalPosition - poseTranslation;
+  frc::Translation2d distance = poseTranslation - GoalPosition;
 
   //calculate angle based on the x & y distances
   frc::Rotation2d angle = distance.Angle();
 
   //calculate the vertical angle of the turret needed for the distance
-  //double targetVertical = extrapolateAngle(distance.Norm().value());
+  double targetVertical = extrapolateAngle(distance.Norm().value());
 
-  frc::Rotation2d TurretTarget = angle - pose.Rotation() - frc::Rotation2d{units::radian_t{PI}};
+  frc::Rotation2d TurretTarget = angle - pose.Rotation();
 
   frc::SmartDashboard::PutNumber("Turret Target: ", TurretTarget.Radians().value());
 
@@ -854,14 +876,21 @@ void AlignTurret(){
   while (targetRad < -PI) targetRad += 2.0 * PI;
 
   //clamps the value to the robots softlimits
-  targetRad = std::clamp(targetRad, -2.260, 1.647);
+  targetRad = std::clamp(targetRad, -PI * 0.95, PI * 0.95);
+
+  //insert slew rate limiter!
+  //targetRad = limitturretturn.Calculate(units::radian_t(targetRad));
+  units::radian_t targetRad_unit{targetRad};
 
   frc::SmartDashboard::PutNumber("Target Rad: ", targetRad);
+  frc::SmartDashboard::PutNumber("Butt: ", double(turretlimit.Calculate(targetRad_unit)));
 
   //Sets the rotational motor's angle, to that position
   HorizontalTurret.GetClosedLoopController().SetReference(
-    targetRad,
-  rev::spark::SparkBase::ControlType::kPosition
+    //turretlimit.Calculate(units::radians{targetRad}),
+    double(turretlimit.Calculate(targetRad_unit)),
+    //targetRad,
+    rev::spark::SparkBase::ControlType::kPosition
   );
 
   //VerticalTurret.GetClosedLoopController().SetReference(
@@ -1141,6 +1170,14 @@ double extrapolateAngle(double d){
   
   //returns the last angle if the value isn't between any known distances
   return distanceAngleTable.back().second;
+}
+
+//sets position of the horizontal/vertical turret and resets everything
+void resetAll(){
+  ResetGyro();
+  ResetPoseFromLimelight();
+  VerticalTurret.GetEncoder().SetPosition(45);
+  HorizontalTurret.GetEncoder().SetPosition(-PI/2+PI/4);
 }
 
 };
