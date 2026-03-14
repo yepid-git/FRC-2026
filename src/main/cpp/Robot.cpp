@@ -69,6 +69,7 @@ class Robot : public frc::TimedRobot {
   double lastKnownYaw = 0.0;  
 
 
+  double drivespeed = 10;
 
   //member for the auto command
   frc2::CommandPtr autoCommand = frc2::cmd::None();
@@ -200,7 +201,7 @@ void RobotInit(){
 
   LimelightHelpers::setPipelineIndex("", 0);
   //i dont think the led is necessary im ngl
-  LimelightHelpers::setLEDMode_ForceOn("");
+  LimelightHelpers::setLEDMode_ForceOff("");
 
   //lots of configs
   //Note: TUNE PID's Later (maybe?)
@@ -226,8 +227,8 @@ void RobotInit(){
   driveConfig.closedLoop
     .SetFeedbackSensor(rev::spark::FeedbackSensor::kPrimaryEncoder)
     //pid might be too small?
-    .Pid(0.1, 0.000001, 0.00000001)
-    .VelocityFF(0.25)
+    .Pid(0.2, 0.000001, 0.00000001)
+//    .VelocityFF(0.25)
     .IZone(4000);
 
   steerConfig
@@ -291,7 +292,7 @@ void RobotInit(){
 
   HorizontalTurretConfig.closedLoop
   .SetFeedbackSensor(rev::spark::FeedbackSensor::kPrimaryEncoder)
-  .Pid(0.3, 0.0, 0.0)
+  .Pid(0.2, 0.0, 0.0)
   .PositionWrappingEnabled(false) //experiment
   .PositionWrappingInputRange(-PI, PI)
   .OutputRange(-0.9, 0.9);
@@ -669,7 +670,7 @@ void AutonomousInit() {
   //defining my own shoot command
   frc2::CommandPtr shootCommand = 
   frc2::cmd::Run([this]() {
-      pidfiresh.SetReference(1800, rev::spark::SparkBase::ControlType::kVelocity);
+      pidfiresh.SetReference(1700, rev::spark::SparkBase::ControlType::kVelocity);
       Indexer.Set(IndexerSpeed);
   }).WithTimeout(5.0_s)
   .AndThen([this]() {
@@ -690,9 +691,37 @@ void AutonomousInit() {
 
   frc2::CommandPtr spinFlywheelCommand = 
   frc2::cmd::Run([this]() {
-      pidfiresh.SetReference(6368, rev::spark::SparkBase::ControlType::kVelocity);
+      pidfiresh.SetReference(1700, rev::spark::SparkBase::ControlType::kVelocity);
   });
 
+
+auto makeShootCommand = [this]() {
+  return frc2::cmd::Run([this]() {
+      pidfiresh.SetReference(1700, rev::spark::SparkBase::ControlType::kVelocity);
+      Indexer.Set(IndexerSpeed);
+  }).WithTimeout(5.0_s).AndThen([this]() {
+      firesh.StopMotor(); Indexer.StopMotor();
+  });
+};
+
+
+auto makeIntakeCommand = [this]() {
+  return frc2::cmd::Run([this]() {
+      Intake.Set(-1);
+  });
+};
+
+auto makeAlignTurretCommand = [this]() {
+  return frc2::cmd::Run([this]() {
+      AlignTurret();
+  }).WithTimeout(0.5_s);
+};
+
+auto makeSpinFlywheelCommand = [this]() {
+  return frc2::cmd::Run([this]() {
+      pidfiresh.SetReference(1700, rev::spark::SparkBase::ControlType::kVelocity);
+  });
+};
   /*
   autoCommand = pathplanner::PathPlannerAuto("auto").ToPtr()
   .AndThen(std::move(shootCommand))
@@ -704,17 +733,15 @@ void AutonomousInit() {
   auto path1b = pathplanner::PathPlannerPath::fromPathFile("blue path 1 b");
   
   //first, path to center runs alone
-  autoCommand = std::move(alignTurretCommand)
-  .AndThen(std::move(shootCommand))
-  .AndThen(pathplanner::AutoBuilder::followPath(path1c))
-  //next, the path to intake, as well as the intake commands run simultaneously
-  .AndThen(pathplanner::AutoBuilder::followPath(path1i).DeadlineFor(std::move(intakeCommand)))
-  //the robot takes the path back, while aligning the turret
-  .AndThen(pathplanner::AutoBuilder::followPath(path1b).DeadlineFor(std::move(alignTurretCommand).AlongWith(std::move(spinFlywheelCommand))))
-  //the robot shoots!
-  .AndThen(std::move(shootCommand))
-  //timeout to prevent hitting time limit
-  .WithTimeout(14.5_s);
+  autoCommand = 
+        makeShootCommand()
+        .AndThen(pathplanner::AutoBuilder::followPath(path1c))
+        .AndThen(pathplanner::AutoBuilder::followPath(path1i).DeadlineFor(makeIntakeCommand()))
+        .AndThen(pathplanner::AutoBuilder::followPath(path1b).DeadlineFor(
+            makeAlignTurretCommand().AlongWith(makeSpinFlywheelCommand())
+        ))
+        .AndThen(makeShootCommand())
+        .WithTimeout(14.5_s);
   autoCommand.Schedule();
 
   
@@ -724,6 +751,28 @@ void AutonomousInit() {
 }
 
 void AutonomousPeriodic() {
+  /*
+  frc::Timer m_timer;
+  m_timer.Reset();
+  
+  
+  if(5.0_s < m_timer.Get()){
+    pidfiresh.SetReference(1700, rev::spark::SparkBase::ControlType::kVelocity);
+    if(1.0_s < m_timer.Get()){
+    HorizontalTurret.GetClosedLoopController().SetReference(-PI/4+PI/12, rev::spark::SparkBase::ControlType::kPosition);
+    Indexer.Set(IndexerSpeed);
+    }
+  } else {
+      Drive(2, 0, 0);
+  }
+  
+
+  Indexer.Set(IndexerSpeed);
+  pidfiresh.SetReference(1800, rev::spark::SparkBase::ControlType::kVelocity);
+  frc::SmartDashboard::PutNumber("time: ", m_timer.Get().value());
+
+  */
+
   frc2::CommandScheduler::GetInstance().Run();
 }
 
@@ -814,6 +863,12 @@ void TeleopPeriodic() {
   }
 
 
+  // if (controller.GetLeftStickButton()){
+  //   drivespeed = 10;
+  // }
+  // if(controller.GetRightStickButton()){
+  //   drivespeed = 5;
+  // }
 
   //shooter code
   //actual rpm is targetrpm * 22/15
@@ -858,10 +913,7 @@ void TeleopPeriodic() {
 void AlignTurret(){
   //calculate distance from robot to goal
   frc::Translation2d poseTranslation = pose.Translation();
-  //frc::Translation2d distance = poseTranslation - GoalPosition;
-
-  //alternative aim
-  frc::Translation2d distance = GoalPosition - poseTranslation;
+  frc::Translation2d distance = poseTranslation - GoalPosition;
 
   //calculate angle based on the x & y distances
   frc::Rotation2d angle = distance.Angle();
@@ -869,7 +921,7 @@ void AlignTurret(){
   //calculate the vertical angle of the turret needed for the distance
   double targetVertical = extrapolateAngle(distance.Norm().value());
 
-  frc::Rotation2d TurretTarget = angle - pose.Rotation() - frc::Rotation2d{units::radian_t{PI}};
+  frc::Rotation2d TurretTarget = angle - pose.Rotation();
 
   frc::SmartDashboard::PutNumber("Turret Target: ", TurretTarget.Radians().value());
 
@@ -879,7 +931,7 @@ void AlignTurret(){
   while (targetRad < -PI) targetRad += 2.0 * PI;
 
   //clamps the value to the robots softlimits
-  targetRad = std::clamp(targetRad, -2.260, 1.647);
+  targetRad = std::clamp(targetRad, -PI * 0.95, PI * 0.95);
 
   //insert slew rate limiter!
   //targetRad = limitturretturn.Calculate(units::radian_t(targetRad));
@@ -963,9 +1015,9 @@ void Drive(double x, double y, double rotate){
   //max rotation speed is 3 rad/s
 
   //trying to increase speed
-  units::radians_per_second_t rad{rotate*3};
-  units::meters_per_second_t speedy{y*5};
-  units::meters_per_second_t speedx{x*5};
+  units::radians_per_second_t rad{rotate*drivespeed};
+  units::meters_per_second_t speedy{y*drivespeed};
+  units::meters_per_second_t speedx{x*drivespeed};
 
   //speedx = (x * std::abs(x)) * 4_mps;
 
@@ -990,7 +1042,7 @@ void Drive(double x, double y, double rotate){
   auto modules = kinematics.ToSwerveModuleStates(speeds);
 
   //safety to prevent wheels from spinning too fast
-  kinematics.DesaturateWheelSpeeds(&modules, 5_mps);
+  //kinematics.DesaturateWheelSpeeds(&modules, 5_mps);
 
   //just stores the swerve module states in each motor
   auto [fl, fr, bl, br] = modules;
@@ -1107,7 +1159,10 @@ void ResetPoseFromLimelight() {
       llPose.pose
     );
   } else {
-    ResetPoseEstimator();
+    poseEstimator->ResetPosition(
+      frc::Rotation2d{units::degree_t{lastKnownAngle}},
+      GetSwervePositions(),
+      frc::Pose2d{3.506_m, 7.459_m, frc::Rotation2d{0_deg}});
   }
 }
 
