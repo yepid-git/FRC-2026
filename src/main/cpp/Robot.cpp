@@ -180,6 +180,7 @@ class Robot : public frc::TimedRobot {
   frc::SlewRateLimiter<units::meters_per_second> limitx{3_mps / .5_s};
   frc::SlewRateLimiter<units::meters_per_second> limity{3_mps / .5_s};
   frc::SlewRateLimiter<units::radians_per_second> limitrot{3_rad_per_s / .5_s};
+  frc::SlewRateLimiter<units::radians> limitturretturn{3_rad / .5_s};
 
   //Controller Mode Variables
   bool m_manual_mode = true;
@@ -215,8 +216,8 @@ void RobotInit(){
   //The conversion factor here turns rotations, to meters. In one rotation, the wheel travels
   //diameter * PI / gear ratio
   driveConfig.encoder
-    .PositionConversionFactor((PI * 0.1016) / gearratio)
-    .VelocityConversionFactor(((PI * 0.1016) / gearratio) / 60.0);
+    .PositionConversionFactor((PI * 0.0965 * 1.1) / gearratio)
+    .VelocityConversionFactor(((PI * 0.0965 * 1.1) / gearratio) / 60.0);
 
   driveConfig.closedLoop
     .SetFeedbackSensor(rev::spark::FeedbackSensor::kPrimaryEncoder)
@@ -286,15 +287,15 @@ void RobotInit(){
 
   HorizontalTurretConfig.closedLoop
   .SetFeedbackSensor(rev::spark::FeedbackSensor::kPrimaryEncoder)
-  .Pid(0.8, 0.0, 0.05)
+  .Pid(0.7, 0.0, 0.0)
   .PositionWrappingEnabled(false) //experiment
   .PositionWrappingInputRange(-PI, PI)
   .OutputRange(-0.9, 0.9);
 
   HorizontalTurretConfig.softLimit
-    .ForwardSoftLimit(PI*0.95)  // 180*0.95 degrees
+    .ForwardSoftLimit((-PI/2) + 3.318 - 0.1)  // 180*0.95 degrees
     .ForwardSoftLimitEnabled(true)
-    .ReverseSoftLimit(-PI*0.95) // -180*0.95 degrees
+    .ReverseSoftLimit((-PI/2)-0.789 + 0.1) // 
     .ReverseSoftLimitEnabled(true);
 
 
@@ -384,7 +385,7 @@ void RobotInit(){
   double floff = 0.5;
   double froff = 0.14;
   double bloff = -0.1;
-  double broff = -0.25;
+  double broff = -0.245;
 
 
   rotfl.GetEncoder().SetPosition((encfl.Get() + floff) * 2.0 * PI);
@@ -738,7 +739,7 @@ void TeleopPeriodic() {
 
   if(controller.GetBButtonPressed()){
     VerticalTurret.GetEncoder().SetPosition(45);
-    HorizontalTurret.GetEncoder().SetPosition(0);
+    HorizontalTurret.GetEncoder().SetPosition(-PI/2+PI/4); //starting position is -90 degrees
   }
 
 
@@ -859,7 +860,7 @@ void AlignTurret(){
 
   //Sets the rotational motor's angle, to that position
   HorizontalTurret.GetClosedLoopController().SetReference(
-    targetRad,
+    limitturretturn.Calculate(targetRad),
   rev::spark::SparkBase::ControlType::kPosition
   );
 
