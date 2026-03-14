@@ -869,7 +869,7 @@ void AlignTurret(){
   //calculate the vertical angle of the turret needed for the distance
   double targetVertical = extrapolateAngle(distance.Norm().value());
 
-  frc::Rotation2d TurretTarget = angle - pose.Rotation() - units::radian_t(PI);
+  frc::Rotation2d TurretTarget = angle - pose.Rotation() - frc::Rotation2d{units::radian_t{PI}};
 
   frc::SmartDashboard::PutNumber("Turret Target: ", TurretTarget.Radians().value());
 
@@ -879,7 +879,7 @@ void AlignTurret(){
   while (targetRad < -PI) targetRad += 2.0 * PI;
 
   //clamps the value to the robots softlimits
-  targetRad = std::clamp(targetRad, -PI * 0.95, PI * 0.95);
+  targetRad = std::clamp(targetRad, -2.260, 1.647);
 
   //insert slew rate limiter!
   //targetRad = limitturretturn.Calculate(units::radian_t(targetRad));
