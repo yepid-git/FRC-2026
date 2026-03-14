@@ -287,7 +287,7 @@ void RobotInit(){
 
   HorizontalTurretConfig.closedLoop
   .SetFeedbackSensor(rev::spark::FeedbackSensor::kPrimaryEncoder)
-  .Pid(0.7, 0.0, 0.0)
+  .Pid(0.8, 0.0, 0.05)
   .PositionWrappingEnabled(false) //experiment
   .PositionWrappingInputRange(-PI, PI)
   .OutputRange(-0.9, 0.9);
@@ -739,7 +739,7 @@ void TeleopPeriodic() {
 
   if(controller.GetBButtonPressed()){
     VerticalTurret.GetEncoder().SetPosition(45);
-    HorizontalTurret.GetEncoder().SetPosition(-PI/2+PI/4); //starting position is -90 degrees
+    HorizontalTurret.GetEncoder().SetPosition(-PI/2); //starting position is -90 degrees
   }
 
 
@@ -836,13 +836,13 @@ void TeleopPeriodic() {
 void AlignTurret(){
   //calculate distance from robot to goal
   frc::Translation2d poseTranslation = pose.Translation();
-  frc::Translation2d distance = poseTranslation - GoalPosition;
+  frc::Translation2d distance = GoalPosition - poseTranslation;
 
   //calculate angle based on the x & y distances
   frc::Rotation2d angle = distance.Angle();
 
   //calculate the vertical angle of the turret needed for the distance
-  double targetVertical = extrapolateAngle(distance.Norm().value());
+  //double targetVertical = extrapolateAngle(distance.Norm().value());
 
   frc::Rotation2d TurretTarget = angle - pose.Rotation();
 
@@ -854,13 +854,13 @@ void AlignTurret(){
   while (targetRad < -PI) targetRad += 2.0 * PI;
 
   //clamps the value to the robots softlimits
-  targetRad = std::clamp(targetRad, -PI * 0.95, PI * 0.95);
+  targetRad = std::clamp(targetRad, -2.260, 1.647);
 
   frc::SmartDashboard::PutNumber("Target Rad: ", targetRad);
 
   //Sets the rotational motor's angle, to that position
   HorizontalTurret.GetClosedLoopController().SetReference(
-    limitturretturn.Calculate(targetRad),
+    targetRad,
   rev::spark::SparkBase::ControlType::kPosition
   );
 
