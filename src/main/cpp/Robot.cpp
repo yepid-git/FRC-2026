@@ -844,7 +844,7 @@ void AlignTurret(){
   //calculate the vertical angle of the turret needed for the distance
   //double targetVertical = extrapolateAngle(distance.Norm().value());
 
-  frc::Rotation2d TurretTarget = angle - pose.Rotation();
+  frc::Rotation2d TurretTarget = angle - pose.Rotation() - frc::Rotation2d{units::radian_t{PI}};
 
   frc::SmartDashboard::PutNumber("Turret Target: ", TurretTarget.Radians().value());
 
