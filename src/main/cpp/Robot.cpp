@@ -49,6 +49,8 @@
 
 
 class Robot : public frc::TimedRobot {
+  //color
+  bool isRed = false;
 
   //limelight placeholder variables
   bool hastarget = false;
@@ -336,6 +338,19 @@ void RobotInit(){
   .PositionWrappingEnabled(false)
   .OutputRange(-0.75, 0.75);
 
+
+  //configurations for hang motors
+  HangConfig
+    .Inverted(true)
+    .SetIdleMode(rev::spark::SparkBaseConfig::IdleMode::kBrake);
+  HangConfig.encoder
+    .PositionConversionFactor(1)
+    .VelocityConversionFactor(1);
+  HangConfig.closedLoop
+    .SetFeedbackSensor(rev::spark::FeedbackSensor::kPrimaryEncoder)
+    .Pid(0.0005, 0.0000001, 0.0)
+    .IZone(4000);
+
   //setting configurations for wheel and rotational motors
   wheelfl.Configure(driveConfig, rev::spark::SparkMax::ResetMode::kResetSafeParameters,
     rev::spark::SparkMax::PersistMode::kPersistParameters);
@@ -414,17 +429,6 @@ void RobotInit(){
     .Pid(0.0275, 0.000002, 0.00000001)
     .IZone(4000);
 
-  //configurations for hang motors
-  HangConfig
-    .Inverted(true)
-    .SetIdleMode(rev::spark::SparkBaseConfig::IdleMode::kBrake);
-  HangConfig.encoder
-    .PositionConversionFactor(1)
-    .VelocityConversionFactor(1);
-  HangConfig.closedLoop
-    .SetFeedbackSensor(rev::spark::FeedbackSensor::kPrimaryEncoder)
-    .Pid(0.0005, 0.0000001, 0.0)
-    .IZone(4000);
 
     
   
@@ -547,17 +551,21 @@ void RobotPeriodic() {
   UpdatePose();
   LimelightHelpers::SetRobotOrientation(
     "",
-    lastKnownYaw,
+    lastKnownAngle,
     0, 0, 0, 0, 0 //sets yawrate, pitch, pitchrate, and roll to 0
   );
 
-  LimelightHelpers::PoseEstimate testPose = LimelightHelpers::getBotPoseEstimate_wpiBlue_MegaTag2("");
+  LimelightHelpers::PoseEstimate testPose = isRed ?
+    LimelightHelpers::getBotPoseEstimate_wpiRed_MegaTag2("") :
+    LimelightHelpers::getBotPoseEstimate_wpiBlue_MegaTag2("");
   frc::SmartDashboard::PutBoolean("Limelight Reachable: ", testPose.timestampSeconds.value() > 0);
 
   LimelightHelpers::PoseEstimate mt2;
 
   //if(color == 'b'){
-  mt2 = LimelightHelpers::getBotPoseEstimate_wpiBlue_MegaTag2("");
+  mt2 = isRed ?
+    LimelightHelpers::getBotPoseEstimate_wpiRed_MegaTag2("") :
+    LimelightHelpers::getBotPoseEstimate_wpiBlue_MegaTag2("");
   //}
   /* else {
   mt2 = LimelightHelpers::getBotPoseEstimate_wpiRed_MegaTag2("limelight");
@@ -647,53 +655,33 @@ void RobotPeriodic() {
 
 void AutonomousInit() {
 
-    ResetGyro();
-    ResetPoseFromLimelight();
-    VerticalTurret.GetEncoder().SetPosition(45);
-    HorizontalTurret.GetEncoder().SetPosition(-PI/2);
-
-  //color change
   auto alliance = frc::DriverStation::GetAlliance();
   //handles flipping of coordinates 
   if (alliance && alliance.value() == frc::DriverStation::Alliance::kRed) {
+    isRed = true;
     GoalPosition = RedGoalPosition;
   } else {
     GoalPosition = BlueGoalPosition;
+    isRed = false;
   }
-  time.Reset();
-  ResetGyro();
+  //zeros out gyro, and then ensures that the ahrs reads 180 degrees (it starts backwards)
+  ahrs->ZeroYaw();
+  if (isRed) {
+      ahrs->SetAngleAdjustment(0.0);
+      lastKnownAngle = 0.0;
+  } else {
+      ahrs->SetAngleAdjustment(180.0);
+      lastKnownAngle = 180.0;
+  }
+  lastKnownYaw = 180.0;
+
   ResetPoseFromLimelight();
-  
+
   VerticalTurret.GetEncoder().SetPosition(45);
-  HorizontalTurret.GetEncoder().SetPosition(-PI/2+PI/4); //starting position is -90 degrees
-  
-  //defining my own shoot command
-  frc2::CommandPtr shootCommand = 
-  frc2::cmd::Run([this]() {
-      pidfiresh.SetReference(1700, rev::spark::SparkBase::ControlType::kVelocity);
-      Indexer.Set(IndexerSpeed);
-  }).WithTimeout(5.0_s)
-  .AndThen([this]() {
-      firesh.StopMotor();
-      Indexer.StopMotor();
-  });
+  HorizontalTurret.GetEncoder().SetPosition(-PI/2);
 
-
-  frc2::CommandPtr intakeCommand = 
-  frc2::cmd::Run([this]() {
-      Intake.Set(-1);
-  });
-
-  frc2::CommandPtr alignTurretCommand = 
-  frc2::cmd::Run([this]() {
-      AlignTurret();
-  }).WithTimeout(0.5_s);
-
-  frc2::CommandPtr spinFlywheelCommand = 
-  frc2::cmd::Run([this]() {
-      pidfiresh.SetReference(1700, rev::spark::SparkBase::ControlType::kVelocity);
-  });
-
+  //color change
+  time.Reset();
 
 auto makeShootCommand = [this]() {
   return frc2::cmd::Run([this]() {
@@ -722,6 +710,21 @@ auto makeSpinFlywheelCommand = [this]() {
       pidfiresh.SetReference(1700, rev::spark::SparkBase::ControlType::kVelocity);
   });
 };
+
+auto waitForVision = [this]() {
+return frc2::cmd::WaitUntil([this]() {
+LimelightHelpers::PoseEstimate mt2 = isRed ?
+  LimelightHelpers::getBotPoseEstimate_wpiRed_MegaTag2("") :
+  LimelightHelpers::getBotPoseEstimate_wpiBlue_MegaTag2("");
+return mt2.tagCount >= 1;
+}).WithTimeout(0.5_s)
+.AndThen(frc2::cmd::RunOnce([this]() {
+ResetPoseFromLimelight();
+// Tighten vision trust right at the start since we have a clear tag view
+poseEstimator->SetVisionMeasurementStdDevs({0.1, 0.1, 686367.69});
+}));
+};
+
   /*
   autoCommand = pathplanner::PathPlannerAuto("auto").ToPtr()
   .AndThen(std::move(shootCommand))
@@ -732,9 +735,15 @@ auto makeSpinFlywheelCommand = [this]() {
   auto path1i = pathplanner::PathPlannerPath::fromPathFile("blue path 1 i");
   auto path1b = pathplanner::PathPlannerPath::fromPathFile("blue path 1 b");
   
+  //lambda function to mirror start pose
+  frc::Pose2d startPose = isRed ?
+    frc::Pose2d{13.03_m, 7.459_m, frc::Rotation2d{0_deg}} :
+    frc::Pose2d{3.506_m, 7.459_m, frc::Rotation2d{180_deg}};
+
   //first, path to center runs alone
   autoCommand = 
-        makeShootCommand()
+        pathplanner::AutoBuilder::resetOdom(startPose)
+        .AndThen(makeShootCommand().DeadlineFor(waitForVision()))
         .AndThen(pathplanner::AutoBuilder::followPath(path1c))
         .AndThen(pathplanner::AutoBuilder::followPath(path1i).DeadlineFor(makeIntakeCommand()))
         .AndThen(pathplanner::AutoBuilder::followPath(path1b).DeadlineFor(
@@ -763,7 +772,7 @@ void AutonomousPeriodic() {
     Indexer.Set(IndexerSpeed);
     }
   } else {
-      Drive(2, 0, 0);
+      Drive(1, 0, 0);
   }
   
 
@@ -778,13 +787,19 @@ void AutonomousPeriodic() {
 
 void TeleopInit() {
   autoCommand.Cancel();
+  ahrs->SetAngleAdjustment(0.0);
+
+  //set trust in vision back to normal
+  poseEstimator->SetVisionMeasurementStdDevs({0.5, 0.5, 686367.69});
   //color change
   auto alliance = frc::DriverStation::GetAlliance();
   //handles flipping of coordinates 
   if (alliance && alliance.value() == frc::DriverStation::Alliance::kRed) {
     GoalPosition = RedGoalPosition;
+    isRed = true;
   } else {
     GoalPosition = BlueGoalPosition;
+    isRed = false;
   }
   time.Stop();
   time.Reset();
@@ -1149,23 +1164,21 @@ wpi::array<frc::SwerveModulePosition, 4> GetSwervePositions(){
 
 //helper function to reset pose based on limelight
 void ResetPoseFromLimelight() {
-  LimelightHelpers::PoseEstimate llPose = 
+LimelightHelpers::PoseEstimate llPose = isRed ?
+    LimelightHelpers::getBotPoseEstimate_wpiRed_MegaTag2("") :
     LimelightHelpers::getBotPoseEstimate_wpiBlue_MegaTag2("");
 
-  frc::SmartDashboard::PutBoolean("Pose Reset Used Vision: ", llPose.tagCount >= 1);
+frc::SmartDashboard::PutBoolean("Pose Reset Used Vision: ", llPose.tagCount >= 1);
 
-  if (llPose.tagCount >= 1) {
-    poseEstimator->ResetPosition(
-      frc::Rotation2d{units::degree_t{lastKnownAngle}},
-      GetSwervePositions(),
-      llPose.pose
-    );
-  } else {
-    poseEstimator->ResetPosition(
-      frc::Rotation2d{units::degree_t{lastKnownAngle}},
-      GetSwervePositions(),
-      frc::Pose2d{3.506_m, 7.459_m, frc::Rotation2d{0_deg}});
-  }
+frc::Pose2d fallback = isRed ?
+    frc::Pose2d{13.03_m, 7.459_m, frc::Rotation2d{0_deg}} :
+    frc::Pose2d{3.506_m, 7.459_m, frc::Rotation2d{180_deg}};
+
+poseEstimator->ResetPosition(
+    frc::Rotation2d{units::degree_t{lastKnownAngle}},
+    GetSwervePositions(),
+    llPose.tagCount >= 1 ? llPose.pose : fallback
+);
 }
 
 void xstop(){
@@ -1181,9 +1194,6 @@ void xstop(){
   wheelbl.GetClosedLoopController().SetReference(0, rev::spark::SparkBase::ControlType::kVelocity);
   wheelbr.GetClosedLoopController().SetReference(0, rev::spark::SparkBase::ControlType::kVelocity);
 
-  //yes the repeated GetClosedLoopController() is ugly
-  //no you cannot store the closed loop controllers as variables
-  //actually you can. note: simplify ts later 
 }
 
 //navx safeguard
