@@ -71,7 +71,7 @@ class Robot : public frc::TimedRobot {
   double lastKnownYaw = 0.0;  
 
 
-  double drivespeed = 10;
+  double drivespeed = 5;
 
   //member for the auto command
   frc2::CommandPtr autoCommand = frc2::cmd::None();
@@ -253,10 +253,11 @@ void RobotInit(){
 
   //leader shooter config 
   shooterLeaderConfig
-    .VoltageCompensation(10.0)
+    .VoltageCompensation(12.0)
     .Inverted(true)
-    .OpenLoopRampRate(0.00) // seconds to full power
-    .ClosedLoopRampRate(0.00)
+    .OpenLoopRampRate(0.4) // seconds to full power
+    .ClosedLoopRampRate(0.4)
+    .SmartCurrentLimit(60)
     .SetIdleMode(rev::spark::SparkBaseConfig::IdleMode::kCoast);
   
   shooterLeaderConfig.closedLoop
@@ -350,6 +351,24 @@ void RobotInit(){
     .SetFeedbackSensor(rev::spark::FeedbackSensor::kPrimaryEncoder)
     .Pid(0.0005, 0.0000001, 0.0)
     .IZone(4000);
+
+
+
+  /*
+  CURRENT LIMITS ON EVERYTHING!!!
+  if we still have brownouts, lets try uncommenting!
+  driveConfig.SmartCurrentLimit(40);        // each drive wheel
+  steerConfig.SmartCurrentLimit(20);        // each steer motor
+  IndexerConfig.SmartCurrentLimit(20);
+  IntakeConfig.SmartCurrentLimit(30);
+  HangConfig.SmartCurrentLimit(40);
+  hopperConfig.SmartCurrentLimit(20);
+  HorizontalTurretConfig.SmartCurrentLimit(15);
+  VerticalTurretConfig.SmartCurrentLimit(15);
+  
+  
+  */
+
 
   //setting configurations for wheel and rotational motors
   wheelfl.Configure(driveConfig, rev::spark::SparkMax::ResetMode::kResetSafeParameters,
@@ -711,6 +730,8 @@ auto makeSpinFlywheelCommand = [this]() {
   });
 };
 
+
+
 auto waitForVision = [this]() {
 return frc2::cmd::WaitUntil([this]() {
 LimelightHelpers::PoseEstimate mt2 = isRed ?
@@ -746,9 +767,7 @@ poseEstimator->SetVisionMeasurementStdDevs({0.1, 0.1, 686367.69});
         .AndThen(makeShootCommand().DeadlineFor(waitForVision()))
         .AndThen(pathplanner::AutoBuilder::followPath(path1c))
         .AndThen(pathplanner::AutoBuilder::followPath(path1i).DeadlineFor(makeIntakeCommand()))
-        .AndThen(pathplanner::AutoBuilder::followPath(path1b).DeadlineFor(
-            makeAlignTurretCommand().AlongWith(makeSpinFlywheelCommand())
-        ))
+        .AndThen(pathplanner::AutoBuilder::followPath(path1b).DeadlineFor(makeSpinFlywheelCommand()))
         .AndThen(makeShootCommand())
         .WithTimeout(14.5_s);
   autoCommand.Schedule();
@@ -1044,11 +1063,11 @@ void Drive(double x, double y, double rotate){
   frc::ChassisSpeeds speeds = frc::ChassisSpeeds::FromFieldRelativeSpeeds(
     //uses the slewrate limiter to determine necessary chassis speeds
     //taking off speed limits, im curious...
-    //limitx.Calculate(speedx),
-    //limity.Calculate(speedy),
-    speedx,
-    speedy,
-    rad,  // sensitivity multiplier?? increase if rotation is sluggish, decrease if jittery
+    limitx.Calculate(speedx),
+    limity.Calculate(speedy),
+    //speedx,
+    //speedy,
+    rad*1.5,  // sensitivity multiplier?? increase if rotation is sluggish, decrease if jittery
     rot2d  // This is what enables field-oriented control
   );
 
