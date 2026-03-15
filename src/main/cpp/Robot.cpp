@@ -49,6 +49,9 @@
 
 
 class Robot : public frc::TimedRobot {
+  //field oriented toggle
+  bool fieldOriented = true;
+
   //color
   bool isRed = false;
 
@@ -255,9 +258,9 @@ void RobotInit(){
   shooterLeaderConfig
     .VoltageCompensation(12.0)
     .Inverted(true)
-    .OpenLoopRampRate(0.4) // seconds to full power
-    .ClosedLoopRampRate(0.4)
-    .SmartCurrentLimit(60)
+    .OpenLoopRampRate(0.1) // seconds to full power
+    .ClosedLoopRampRate(0.1)
+    .SmartCurrentLimit(100)
     .SetIdleMode(rev::spark::SparkBaseConfig::IdleMode::kCoast);
   
   shooterLeaderConfig.closedLoop
@@ -302,10 +305,10 @@ void RobotInit(){
 
   HorizontalTurretConfig.softLimit
     //.ForwardSoftLimit((-PI/2) + 3.318 - 0.1)  // 180*0.95 degrees
-    .ForwardSoftLimit(PI/2)
+    .ForwardSoftLimit(PI/2+0.1)
     .ForwardSoftLimitEnabled(true)
     //.ReverseSoftLimit((-PI/2)-0.789 + 0.1) // before
-    .ReverseSoftLimit((-3*PI)/4) 
+    .ReverseSoftLimit((-3*PI)/4-0.1) 
     .ReverseSoftLimitEnabled(true);
 
 
@@ -357,17 +360,14 @@ void RobotInit(){
   /*
   CURRENT LIMITS ON EVERYTHING!!!
   if we still have brownouts, lets try uncommenting!
+  */
   driveConfig.SmartCurrentLimit(40);        // each drive wheel
-  steerConfig.SmartCurrentLimit(20);        // each steer motor
-  IndexerConfig.SmartCurrentLimit(20);
-  IntakeConfig.SmartCurrentLimit(30);
+  steerConfig.SmartCurrentLimit(40);        // each steer motor
   HangConfig.SmartCurrentLimit(40);
   hopperConfig.SmartCurrentLimit(20);
   HorizontalTurretConfig.SmartCurrentLimit(15);
   VerticalTurretConfig.SmartCurrentLimit(15);
   
-  
-  */
 
 
   //setting configurations for wheel and rotational motors
@@ -668,7 +668,6 @@ void RobotPeriodic() {
   frc::SmartDashboard::PutNumber("MT2 tagCount", mt2.tagCount);
   frc::SmartDashboard::PutNumber("MT2 timestamp", mt2.timestampSeconds.value());
   frc::SmartDashboard::PutBoolean("isTrustworthy", isTrustworthy);
-
 }
 
 
@@ -704,7 +703,8 @@ void AutonomousInit() {
 
 auto makeShootCommand = [this]() {
   return frc2::cmd::Run([this]() {
-      pidfiresh.SetReference(1700, rev::spark::SparkBase::ControlType::kVelocity);
+      pidfiresh.SetReference(1000, rev::spark::SparkBase::ControlType::kVelocity);
+      Hopper.Set(-HopperSpeed);
       Indexer.Set(IndexerSpeed);
   }).WithTimeout(5.0_s).AndThen([this]() {
       firesh.StopMotor(); Indexer.StopMotor();
@@ -730,7 +730,11 @@ auto makeSpinFlywheelCommand = [this]() {
   });
 };
 
-
+auto PutTurretBack = [this](){
+  return frc2::cmd::Run([this](){
+    HorizontalTurret.GetClosedLoopController().SetReference(-PI/2, rev::spark::SparkBase::ControlType::kPosition);
+  }).WithTimeout(0.5_s);
+};
 
 auto waitForVision = [this]() {
 return frc2::cmd::WaitUntil([this]() {
@@ -752,16 +756,23 @@ poseEstimator->SetVisionMeasurementStdDevs({0.1, 0.1, 686367.69});
   .WithTimeout(14.5_s);
   */
  //load each path separately
+  auto path1rot = pathplanner::PathPlannerPath::fromPathFile("rotate bot 1");
   auto path1c = pathplanner::PathPlannerPath::fromPathFile("blue path 1 c");
   auto path1i = pathplanner::PathPlannerPath::fromPathFile("blue path 1 i");
   auto path1b = pathplanner::PathPlannerPath::fromPathFile("blue path 1 b");
   
+  //center auto
+
+  auto centerpath = pathplanner::PathPlannerPath::fromPathFile("middle auto");
+
   //lambda function to mirror start pose
   frc::Pose2d startPose = isRed ?
     frc::Pose2d{13.03_m, 7.459_m, frc::Rotation2d{0_deg}} :
     frc::Pose2d{3.506_m, 7.459_m, frc::Rotation2d{180_deg}};
 
   //first, path to center runs alone
+  
+  /*
   autoCommand = 
         pathplanner::AutoBuilder::resetOdom(startPose)
         .AndThen(makeShootCommand().DeadlineFor(waitForVision()))
@@ -771,8 +782,14 @@ poseEstimator->SetVisionMeasurementStdDevs({0.1, 0.1, 686367.69});
         .AndThen(makeShootCommand())
         .WithTimeout(14.5_s);
   autoCommand.Schedule();
-
+  */
   
+//autoCommand = makeShootCommand();
+
+
+
+
+
   time.Start();
 
   
@@ -801,7 +818,26 @@ void AutonomousPeriodic() {
 
   */
 
-  frc2::CommandScheduler::GetInstance().Run();
+  //frc2::CommandScheduler::GetInstance().Run();
+
+  if(time.Get().value() < 1.5){
+    if(!isRed){
+    Drive(0.5, 0, 0);
+    } else{
+    Drive(-0.5, 0, 0);
+    }
+  } else {
+    Drive(0, 0, 0);
+  }
+
+  if(time.Get().value() > 1.5){
+    pidfiresh.SetReference(1700, rev::spark::SparkLowLevel::ControlType::kVelocity);
+    if(time.Get().value() > 3.5){
+      Indexer.Set(IndexerSpeed);
+    }
+  }
+
+  
 }
 
 void TeleopInit() {
@@ -848,6 +884,7 @@ void TeleopPeriodic() {
   */
 
   //Sets turret position to zero, and limtis rotational movement.
+  /* Removing turret functionality
   if (controller2.GetPOV() == 90) {
     //right
     HorizontalTurret.Set(HorizontalSpeed);
@@ -871,16 +908,17 @@ void TeleopPeriodic() {
       Hang.StopMotor();
     }
   }
+  */
 
 
   //hopper code
-  if (controller2.GetRightTriggerAxis()){
+  if (controller2.GetRightTriggerAxis() || controller.GetPOV() == 90){
     Hopper.Set(HopperSpeed);
   } 
-  if (controller2.GetLeftTriggerAxis()){
+  if (controller2.GetLeftTriggerAxis() || controller.GetPOV() == 270){
     Hopper.Set(-HopperSpeed);
   } 
-  if (!controller2.GetLeftTriggerAxis() && !controller2.GetRightTriggerAxis()) {
+  if (!controller2.GetLeftTriggerAxis() && !controller2.GetRightTriggerAxis() && !controller.GetPOV() == 270 && !controller.GetPOV() == 90) {
     Hopper.StopMotor();
   }
 
@@ -911,15 +949,20 @@ void TeleopPeriodic() {
   double targetrpm = 1700;
 
   //if bumper is pressed, fire both motors at the target rpm, otherwise set their velocities to 0
-  if(controller2.GetXButton()){
+  if(controller2.GetXButton() || controller.GetAButton()){
   pidfiresh.SetReference(
       targetrpm,
       rev::spark::SparkBase::ControlType::kVelocity
   );
-  } else {
+  }else {
     firesh.StopMotor();
   }
-  
+
+
+  // B Button toggles field oriented drive
+  if(controller.GetBButtonPressed()){
+    fieldOriented = !fieldOriented;
+  }
 
 
   //controller triggers set indexer velocity
@@ -940,6 +983,7 @@ void TeleopPeriodic() {
   } else { 
     Intake.StopMotor();
   }
+
 
 
 
@@ -1029,7 +1073,7 @@ void Drive(double x, double y, double rotate){
 
   x = frc::ApplyDeadband(x, 0.25);
   y = frc::ApplyDeadband(y, 0.25);
-  rotate = frc::ApplyDeadband(rotate, 0.25);
+  rotate = frc::ApplyDeadband(rotate, 0.1);
 
   
   //rot2d reflects the AHRS gyroscope orientation
@@ -1060,16 +1104,31 @@ void Drive(double x, double y, double rotate){
   /* ChassisSpeeds::FromFieldRelativeSpeeds takes in desired x, desired y, and angular velocities
   as well as the robots current angle
   */
-  frc::ChassisSpeeds speeds = frc::ChassisSpeeds::FromFieldRelativeSpeeds(
+  
+  frc::ChassisSpeeds speeds;
+  if(fieldOriented){
+    speeds = frc::ChassisSpeeds::FromFieldRelativeSpeeds(
     //uses the slewrate limiter to determine necessary chassis speeds
     //taking off speed limits, im curious...
-    limitx.Calculate(speedx),
-    limity.Calculate(speedy),
+    speedx,
+    speedy,
     //speedx,
     //speedy,
     rad*1.5,  // sensitivity multiplier?? increase if rotation is sluggish, decrease if jittery
     rot2d  // This is what enables field-oriented control
   );
+  } else {
+    speeds = frc::ChassisSpeeds::FromFieldRelativeSpeeds(
+    //uses the slewrate limiter to determine necessary chassis speeds
+    //taking off speed limits, im curious...
+    speedx,
+    speedy,
+    //speedx,
+    //speedy,
+    rad*1.5,  // sensitivity multiplier?? increase if rotation is sluggish, decrease if jittery
+    frc::Rotation2d{0_rad}  // This is what enables robot-oriented control
+    );
+  }
 
   //converts the speeds to swerve module states
 
@@ -1266,7 +1325,7 @@ void resetAll(){
   ResetGyro();
   ResetPoseFromLimelight();
   VerticalTurret.GetEncoder().SetPosition(45);
-  HorizontalTurret.GetEncoder().SetPosition(-PI/2+PI/4);
+  HorizontalTurret.GetEncoder().SetPosition(-PI/2);
 }
 
 };
