@@ -7,19 +7,19 @@
         {
           "type": "path",
           "data": {
-            "pathName": "rotate bot 1"
+            "pathName": "left rotate bot blue"
           }
         },
         {
           "type": "path",
           "data": {
-            "pathName": "blue path 1 c"
+            "pathName": "left blue path c"
           }
         },
         {
           "type": "path",
           "data": {
-            "pathName": "blue path 1 i"
+            "pathName": "right blue path i"
           }
         },
         {

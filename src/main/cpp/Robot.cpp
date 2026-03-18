@@ -688,7 +688,7 @@ void AutonomousInit() {
       ahrs->SetAngleAdjustment(0.0);
       lastKnownAngle = 0.0;
   } else {
-      ahrs->SetAngleAdjustment(180.0);
+      ahrs->SetAngleAdjustment(90);
       lastKnownAngle = 180.0;
   }
   lastKnownYaw = 180.0;
@@ -820,7 +820,7 @@ void AutonomousPeriodic() {
 
   //frc2::CommandScheduler::GetInstance().Run();
 
-  if(time.Get().value() < 1.5){
+  if(time.Get().value() < 3){
     if(!isRed){
     Drive(0.5, 0, 0);
     } else{
@@ -830,12 +830,20 @@ void AutonomousPeriodic() {
     Drive(0, 0, 0);
   }
 
-  if(time.Get().value() > 1.5){
-    pidfiresh.SetReference(1700, rev::spark::SparkLowLevel::ControlType::kVelocity);
-    if(time.Get().value() > 3.5){
+  if(time.Get().value() > 3){
+    pidfiresh.SetReference(1650, rev::spark::SparkLowLevel::ControlType::kVelocity);
+    if(time.Get().value() > 3.75){
       Indexer.Set(IndexerSpeed);
+      Hopper.Set(-HopperSpeed);
+      Intake.Set(-IntakeSpeed);
+    } else if (time.Get().value() > 12){
+      Indexer.StopMotor();
+      Hopper.StopMotor();
+      Intake.StopMotor();
     }
   }
+
+
 
   
 }
@@ -918,10 +926,9 @@ void TeleopPeriodic() {
   if (controller2.GetLeftTriggerAxis() || controller.GetPOV() == 270){
     Hopper.Set(-HopperSpeed);
   } 
-  if (!controller2.GetLeftTriggerAxis() && !controller2.GetRightTriggerAxis() && !controller.GetPOV() == 270 && !controller.GetPOV() == 90) {
+  if ((!controller2.GetLeftTriggerAxis() && !controller2.GetRightTriggerAxis()) || (!controller.GetPOV() == 270 && !controller.GetPOV() == 90)){ 
     Hopper.StopMotor();
   }
-
 
   if (controller.GetXButton()){
     xstop();
