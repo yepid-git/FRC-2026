@@ -55,6 +55,13 @@ class Robot : public frc::TimedRobot {
   //color
   bool isRed = false;
 
+  //side sellecting utility
+  frc::SendableChooser<std::string> m_chooser;
+  const std::string kOption1  = "right";
+  const std::string kOption2  = "left";
+  const std::string kOption3  = "center";
+  std::string m_selectedOption;
+
   //limelight placeholder variables
   bool hastarget = false;
   double tx;
@@ -202,6 +209,12 @@ class Robot : public frc::TimedRobot {
 
 
 void RobotInit(){
+  //auto selector
+  m_chooser.SetDefaultOption(kOption1, kOption1);
+  m_chooser.AddOption(kOption2, kOption2);
+  m_chooser.AddOption(kOption3, kOption3);
+  frc::SmartDashboard::PutData("Auto Modes: ", &m_chooser);
+
 
 
   LimelightHelpers::setPipelineIndex("", 0);
@@ -233,7 +246,7 @@ void RobotInit(){
     .SetFeedbackSensor(rev::spark::FeedbackSensor::kPrimaryEncoder)
     //pid might be too small?
     .Pid(0.2, 0.000001, 0.00000001)
-//    .VelocityFF(0.25)
+    .VelocityFF(0.25)
     .IZone(4000);
 
   steerConfig
@@ -673,6 +686,7 @@ void RobotPeriodic() {
 
 void AutonomousInit() {
 
+
   auto alliance = frc::DriverStation::GetAlliance();
   //handles flipping of coordinates 
   if (alliance && alliance.value() == frc::DriverStation::Alliance::kRed) {
@@ -682,6 +696,9 @@ void AutonomousInit() {
     GoalPosition = BlueGoalPosition;
     isRed = false;
   }
+
+
+
   //zeros out gyro, and then ensures that the ahrs reads 180 degrees (it starts backwards)
   ahrs->ZeroYaw();
   if (isRed) {
@@ -756,14 +773,37 @@ poseEstimator->SetVisionMeasurementStdDevs({0.1, 0.1, 686367.69});
   .WithTimeout(14.5_s);
   */
  //load each path separately
+ /*
   auto path1rot = pathplanner::PathPlannerPath::fromPathFile("rotate bot 1");
   auto path1c = pathplanner::PathPlannerPath::fromPathFile("blue path 1 c");
   auto path1i = pathplanner::PathPlannerPath::fromPathFile("blue path 1 i");
   auto path1b = pathplanner::PathPlannerPath::fromPathFile("blue path 1 b");
+  deprecated paths
+  */
   
   //center auto
 
   auto centerpath = pathplanner::PathPlannerPath::fromPathFile("middle auto");
+
+    m_selectedOption = m_chooser.GetSelected();
+
+  //schedule commands based on which option is selected
+  if (m_selectedOption == kOption1 && isRed) {
+    //red right
+      
+  } else if (m_selectedOption == kOption2 && isRed) {
+    //red left
+      
+  } else if (m_selectedOption == kOption3 && isRed) {
+    //red center
+      
+  } else if (m_selectedOption == kOption1 && !isRed) {
+    //blue right
+  } else if (m_selectedOption == kOption2 && !isRed) {
+    //blue left
+  } else {
+    //blue center
+  }
 
   //lambda function to mirror start pose
   frc::Pose2d startPose = isRed ?

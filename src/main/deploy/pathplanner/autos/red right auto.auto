@@ -1,0 +1,37 @@
+{
+  "version": "2025.0",
+  "command": {
+    "type": "sequential",
+    "data": {
+      "commands": [
+        {
+          "type": "path",
+          "data": {
+            "pathName": "red right path rotate"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "red right path center"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "red right path intake"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "red right path back"
+          }
+        }
+      ]
+    }
+  },
+  "resetOdom": true,
+  "folder": null,
+  "choreoAuto": false
+}

@@ -7,25 +7,25 @@
         {
           "type": "path",
           "data": {
-            "pathName": "left rotate bot blue"
+            "pathName": "red center back"
           }
         },
         {
           "type": "path",
           "data": {
-            "pathName": "left blue path c"
+            "pathName": "red center pile"
           }
         },
         {
           "type": "path",
           "data": {
-            "pathName": "right blue path i"
+            "pathName": "red center intake"
           }
         },
         {
           "type": "path",
           "data": {
-            "pathName": "blue path 1 b"
+            "pathName": "red center pile back"
           }
         }
       ]
