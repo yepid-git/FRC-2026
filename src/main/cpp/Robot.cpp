@@ -702,22 +702,23 @@ void AutonomousInit() {
   //zeros out gyro, and then ensures that the ahrs reads 180 degrees (it starts backwards)
   ahrs->ZeroYaw();
   if (isRed) {
-      ahrs->SetAngleAdjustment(0.0);
-      lastKnownAngle = 0.0;
+      ahrs->SetAngleAdjustment(180);
+      lastKnownAngle = 180;
   } else {
-      ahrs->SetAngleAdjustment(90);
-      lastKnownAngle = 180.0;
+      ahrs->SetAngleAdjustment(0);
+      lastKnownAngle = 0;
   }
   lastKnownYaw = 180.0;
 
   ResetPoseFromLimelight();
 
   VerticalTurret.GetEncoder().SetPosition(45);
-  HorizontalTurret.GetEncoder().SetPosition(-PI/2);
+  HorizontalTurret.GetEncoder().SetPosition(-PI);
 
   //color change
   time.Reset();
 
+/* removing for organization
 auto makeShootCommand = [this]() {
   return frc2::cmd::Run([this]() {
       pidfiresh.SetReference(1000, rev::spark::SparkBase::ControlType::kVelocity);
@@ -727,37 +728,51 @@ auto makeShootCommand = [this]() {
       firesh.StopMotor(); Indexer.StopMotor();
   });
 };
+*/
 
 
-auto makeIntakeCommand = [this]() {
-  return frc2::cmd::Run([this]() {
+auto makeSpinIntakeCommand = [this]() {
+  return frc2::cmd::RunOnce([this]() {
       Intake.Set(-1);
   });
 };
 
-auto makeAlignTurretCommand = [this]() {
-  return frc2::cmd::Run([this]() {
-      AlignTurret();
-  }).WithTimeout(0.5_s);
+auto makeStopIntakeCommand = [this]() {
+  return frc2::cmd::RunOnce([this]() {
+      Intake.StopMotor();
+  });
 };
 
+
 auto makeSpinFlywheelCommand = [this]() {
-  return frc2::cmd::Run([this]() {
+  return frc2::cmd::RunOnce([this]() {
       pidfiresh.SetReference(1700, rev::spark::SparkBase::ControlType::kVelocity);
   });
 };
 
-auto PutTurretBack = [this](){
-  return frc2::cmd::Run([this](){
-    HorizontalTurret.GetClosedLoopController().SetReference(-PI/2, rev::spark::SparkBase::ControlType::kPosition);
-  }).WithTimeout(0.5_s);
+auto makeStopFlywheelCommand = [this]() {
+  return frc2::cmd::RunOnce([this]() {
+      pidfiresh.SetReference(0, rev::spark::SparkBase::ControlType::kVelocity);
+  });
 };
+
+auto makeSpinIndexerCommand = [this]() {
+  return frc2::cmd::RunOnce([this]() {
+      Indexer.Set(IndexerSpeed);
+  });
+};
+
+auto makeStopIndexerCommand = [this]() {
+  return frc2::cmd::RunOnce([this]() {
+      Indexer.StopMotor();
+  });
+};
+
 
 auto waitForVision = [this]() {
 return frc2::cmd::WaitUntil([this]() {
-LimelightHelpers::PoseEstimate mt2 = isRed ?
-  LimelightHelpers::getBotPoseEstimate_wpiRed_MegaTag2("") :
-  LimelightHelpers::getBotPoseEstimate_wpiBlue_MegaTag2("");
+LimelightHelpers::PoseEstimate mt2 =
+LimelightHelpers::getBotPoseEstimate_wpiBlue_MegaTag2("");
 return mt2.tagCount >= 1;
 }).WithTimeout(0.5_s)
 .AndThen(frc2::cmd::RunOnce([this]() {
@@ -766,6 +781,22 @@ ResetPoseFromLimelight();
 poseEstimator->SetVisionMeasurementStdDevs({0.1, 0.1, 686367.69});
 }));
 };
+
+/*
+turret no longer moves....
+auto PutTurretBack = [this](){
+  return frc2::cmd::Run([this](){
+    HorizontalTurret.GetClosedLoopController().SetReference(-PI/2, rev::spark::SparkBase::ControlType::kPosition);
+  }).WithTimeout(0.5_s);
+};
+
+auto makeAlignTurretCommand = [this]() {
+  return frc2::cmd::Run([this]() {
+      AlignTurret();
+  }).WithTimeout(0.5_s);
+};
+*/ 
+
 
   /*
   autoCommand = pathplanner::PathPlannerAuto("auto").ToPtr()
@@ -781,34 +812,163 @@ poseEstimator->SetVisionMeasurementStdDevs({0.1, 0.1, 686367.69});
   deprecated paths
   */
   
-  //center auto
 
-  auto centerpath = pathplanner::PathPlannerPath::fromPathFile("middle auto");
+  //loading ALL paths here
 
-    m_selectedOption = m_chooser.GetSelected();
+  //blue center paths
+  auto bluecenterback = pathplanner::PathPlannerPath::fromPathFile("blue center back");
+  auto bluecenterpile = pathplanner::PathPlannerPath::fromPathFile("blue center pile");
+  auto bluecenterintake = pathplanner::PathPlannerPath::fromPathFile("blue center intake");
+  auto bluecenterpileback = pathplanner::PathPlannerPath::fromPathFile("blue center pile back");
+
+  //blue right paths
+  auto bluerightpathrotate = pathplanner::PathPlannerPath::fromPathFile("blue right path rotate");
+  auto bluerightpathcenter = pathplanner::PathPlannerPath::fromPathFile("blue right path center");
+  auto bluerightpathintake = pathplanner::PathPlannerPath::fromPathFile("blue right path intake");
+  auto bluerightpathback = pathplanner::PathPlannerPath::fromPathFile("blue right path back");
+
+  //blue left paths
+  auto blueleftpathrotate = pathplanner::PathPlannerPath::fromPathFile("blue left path rotate");
+  auto blueleftpathcenter = pathplanner::PathPlannerPath::fromPathFile("blue left path center");
+  auto blueleftpathintake = pathplanner::PathPlannerPath::fromPathFile("blue left path intake");
+  auto blueleftpathback = pathplanner::PathPlannerPath::fromPathFile("blue left path back");
+
+
+  //red center paths
+  auto redcenterback = pathplanner::PathPlannerPath::fromPathFile("red center back");
+  auto redcenterpile = pathplanner::PathPlannerPath::fromPathFile("red center pile");
+  auto redcenterintake = pathplanner::PathPlannerPath::fromPathFile("red center intake");
+  auto redcenterpileback = pathplanner::PathPlannerPath::fromPathFile("red center pile back");
+
+  //red right paths
+  auto redrightpathrotate = pathplanner::PathPlannerPath::fromPathFile("red right path rotate");
+  auto redrightpathcenter = pathplanner::PathPlannerPath::fromPathFile("red right path center");
+  auto redrightpathintake = pathplanner::PathPlannerPath::fromPathFile("red right path intake");
+  auto redrightpathback = pathplanner::PathPlannerPath::fromPathFile("red right path back");
+
+  //red left paths
+  auto redleftpathrotate = pathplanner::PathPlannerPath::fromPathFile("red left path rotate");
+  auto redleftpathcenter = pathplanner::PathPlannerPath::fromPathFile("red left path center");
+  auto redleftpathintake = pathplanner::PathPlannerPath::fromPathFile("red left path intake");
+  auto redleftpathback = pathplanner::PathPlannerPath::fromPathFile("red left path back");
+
+
+
+  m_selectedOption = m_chooser.GetSelected();
 
   //schedule commands based on which option is selected
   if (m_selectedOption == kOption1 && isRed) {
-    //red right
-      
+
+    //red right auto
+    frc::Pose2d startPose = redrightpathrotate->getStartingHolonomicPose().value();
+    autoCommand =
+    //reset pose at start of path
+    pathplanner::AutoBuilder::resetOdom(startPose)
+    //first go back while spinning up flywheel
+    .AndThen(pathplanner::AutoBuilder::followPath(redrightpathrotate).AlongWith(makeSpinFlywheelCommand()))
+    //SHOOT
+    .AndThen(makeSpinIndexerCommand())
+    //wait 3 seconds before stopping
+    .AndThen(frc2::cmd::Wait(3_s)) 
+    //After done, stop both indexer and flywheel
+    .AndThen(makeStopFlywheelCommand().AlongWith(makeStopIndexerCommand()))
+    //go to the center while spinning intake motors
+    .AndThen(pathplanner::AutoBuilder::followPath(redrightpathcenter).AlongWith(makeSpinIntakeCommand()))
+    //goes on the intake path
+    .AndThen(pathplanner::AutoBuilder::followPath(redrightpathintake))
+    //comes back and stops intake motors, while spinning up flywheel
+    .AndThen(pathplanner::AutoBuilder::followPath(redrightpathback).AlongWith(makeStopIntakeCommand().AlongWith(makeSpinFlywheelCommand())))
+    //spins indexer (shoots)
+    .AndThen(makeSpinIndexerCommand())
+    //wait 6 seconds 
+    .AndThen(frc2::cmd::Wait(6_s)) 
+    //stops everything
+    .AndThen(makeStopFlywheelCommand().AlongWith(makeStopIndexerCommand()).AlongWith(makeStopIntakeCommand()));
+
+    
+
   } else if (m_selectedOption == kOption2 && isRed) {
-    //red left
+
+    //red left auto
+    frc::Pose2d startPose = redleftpathrotate->getStartingHolonomicPose().value();
+    autoCommand =
+    //reset pose at start of path
+    pathplanner::AutoBuilder::resetOdom(startPose)
+    //first go back while spinning up flywheel
+    .AndThen(pathplanner::AutoBuilder::followPath(redleftpathrotate).AlongWith(makeSpinFlywheelCommand()))
+    //SHOOT
+    .AndThen(makeSpinIndexerCommand())
+    //wait 3 seconds before stopping
+    .AndThen(frc2::cmd::Wait(3_s)) 
+    //After done, stop both indexer and flywheel
+    .AndThen(makeStopFlywheelCommand().AlongWith(makeStopIndexerCommand()))
+    //go to the center while spinning intake motors
+    .AndThen(pathplanner::AutoBuilder::followPath(redleftpathcenter).AlongWith(makeSpinIntakeCommand()))
+    //goes on the intake path
+    .AndThen(pathplanner::AutoBuilder::followPath(redleftpathintake))
+    //comes back and stops intake motors, while spinning up flywheel
+    .AndThen(pathplanner::AutoBuilder::followPath(redleftpathback).AlongWith(makeStopIntakeCommand().AlongWith(makeSpinFlywheelCommand())))
+    //spins indexer (shoots)
+    .AndThen(makeSpinIndexerCommand())
+    //wait 6 seconds 
+    .AndThen(frc2::cmd::Wait(6_s)) 
+    //stops everything
+    .AndThen(makeStopFlywheelCommand().AlongWith(makeStopIndexerCommand()).AlongWith(makeStopIntakeCommand()));
       
   } else if (m_selectedOption == kOption3 && isRed) {
+    
     //red center
-      
+    frc::Pose2d startPose = redcenterback->getStartingHolonomicPose().value();
+    autoCommand =
+    //reset pose at start of path
+    pathplanner::AutoBuilder::resetOdom(startPose)  
+    //first go back while spinning up flywheel
+    .AndThen(pathplanner::AutoBuilder::followPath(redcenterback).AlongWith(makeSpinFlywheelCommand()))
+    //SHOOT
+    .AndThen(makeSpinIndexerCommand())
+    //wait 3 seconds before stopping
+    .AndThen(frc2::cmd::Wait(3_s)) 
+    //After done, stop both indexer and flywheel
+    .AndThen(makeStopFlywheelCommand().AlongWith(makeStopIndexerCommand()))
+    //go to the pile
+    .AndThen(pathplanner::AutoBuilder::followPath(redcenterpile).AlongWith(makeSpinIntakeCommand()))
+    //goes on the intake path
+    .AndThen(pathplanner::AutoBuilder::followPath(redcenterintake))
+    //comes back and stops intake motors, while spinning up flywheel
+    .AndThen(pathplanner::AutoBuilder::followPath(redcenterpileback).AlongWith(makeStopIntakeCommand().AlongWith(makeSpinFlywheelCommand())))
+    //spins indexer (shoots)
+    .AndThen(makeSpinIndexerCommand())
+    //wait 6 seconds 
+    .AndThen(frc2::cmd::Wait(6_s)) 
+    //stops everything
+    .AndThen(makeStopFlywheelCommand().AlongWith(makeStopIndexerCommand()).AlongWith(makeStopIntakeCommand()));
+
+
   } else if (m_selectedOption == kOption1 && !isRed) {
     //blue right
+    frc::Pose2d startPose = bluerightpathrotate->getStartingHolonomicPose().value();
+    autoCommand =
+    //reset pose at start of path
+    pathplanner::AutoBuilder::resetOdom(startPose)
+
   } else if (m_selectedOption == kOption2 && !isRed) {
     //blue left
+    frc::Pose2d startPose = blueleftpathrotate->getStartingHolonomicPose().value();
+    autoCommand =
+    //reset pose at start of path
+    pathplanner::AutoBuilder::resetOdom(startPose)
+
   } else {
     //blue center
+    frc::Pose2d startPose = bluecenterback->getStartingHolonomicPose().value();
+    autoCommand =
+    //reset pose at start of path
+    pathplanner::AutoBuilder::resetOdom(startPose)
+
   }
 
-  //lambda function to mirror start pose
-  frc::Pose2d startPose = isRed ?
-    frc::Pose2d{13.03_m, 7.459_m, frc::Rotation2d{0_deg}} :
-    frc::Pose2d{3.506_m, 7.459_m, frc::Rotation2d{180_deg}};
+  autoCommand.Schedule();
+
 
   //first, path to center runs alone
   
@@ -860,6 +1020,7 @@ void AutonomousPeriodic() {
 
   //frc2::CommandScheduler::GetInstance().Run();
 
+  /* commenting out timed version of auto
   if(time.Get().value() < 3){
     if(!isRed){
     Drive(0.5, 0, 0);
@@ -882,8 +1043,9 @@ void AutonomousPeriodic() {
       Intake.StopMotor();
     }
   }
+  */
 
-
+  frc2::CommandScheduler::GetInstance().Run();
 
   
 }
@@ -921,7 +1083,7 @@ void TeleopPeriodic() {
     ResetGyro();
     ResetPoseFromLimelight();
     VerticalTurret.GetEncoder().SetPosition(45);
-    HorizontalTurret.GetEncoder().SetPosition(-PI/2);
+    HorizontalTurret.GetEncoder().SetPosition(-PI);
   }
 
   /*
@@ -1372,7 +1534,7 @@ void resetAll(){
   ResetGyro();
   ResetPoseFromLimelight();
   VerticalTurret.GetEncoder().SetPosition(45);
-  HorizontalTurret.GetEncoder().SetPosition(-PI/2);
+  HorizontalTurret.GetEncoder().SetPosition(-PI);
 }
 
 };
