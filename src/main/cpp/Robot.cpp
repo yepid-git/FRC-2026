@@ -557,8 +557,7 @@ void RobotInit(){
     ),
     config,
     []() {
-        auto alliance = frc::DriverStation::GetAlliance();
-        return alliance && alliance.value() == frc::DriverStation::Alliance::kRed;
+        return false;
     },
     nullptr
 );
@@ -686,7 +685,7 @@ void RobotPeriodic() {
 
 void AutonomousInit() {
 
-
+  //color change
   auto alliance = frc::DriverStation::GetAlliance();
   //handles flipping of coordinates 
   if (alliance && alliance.value() == frc::DriverStation::Alliance::kRed) {
@@ -710,15 +709,17 @@ void AutonomousInit() {
   }
   lastKnownYaw = 180.0;
 
-  ResetPoseFromLimelight();
+  //ResetPoseFromLimelight(); removing this, starting pose is given by pathplanner
 
   VerticalTurret.GetEncoder().SetPosition(45);
   HorizontalTurret.GetEncoder().SetPosition(-PI);
 
-  //color change
-  time.Reset();
+
 
 /* removing for organization
+
+time.Reset();
+
 auto makeShootCommand = [this]() {
   return frc2::cmd::Run([this]() {
       pidfiresh.SetReference(1000, rev::spark::SparkBase::ControlType::kVelocity);
@@ -727,6 +728,19 @@ auto makeShootCommand = [this]() {
   }).WithTimeout(5.0_s).AndThen([this]() {
       firesh.StopMotor(); Indexer.StopMotor();
   });
+};
+
+auto waitForVision = [this]() {
+return frc2::cmd::WaitUntil([this]() {
+LimelightHelpers::PoseEstimate mt2 =
+LimelightHelpers::getBotPoseEstimate_wpiBlue_MegaTag2("");
+return mt2.tagCount >= 1;
+}).WithTimeout(0.5_s)
+.AndThen(frc2::cmd::RunOnce([this]() {
+ResetPoseFromLimelight();
+// Tighten vision trust right at the start since we have a clear tag view
+poseEstimator->SetVisionMeasurementStdDevs({0.1, 0.1, 686367.69});
+}));
 };
 */
 
@@ -768,19 +782,6 @@ auto makeStopIndexerCommand = [this]() {
   });
 };
 
-
-auto waitForVision = [this]() {
-return frc2::cmd::WaitUntil([this]() {
-LimelightHelpers::PoseEstimate mt2 =
-LimelightHelpers::getBotPoseEstimate_wpiBlue_MegaTag2("");
-return mt2.tagCount >= 1;
-}).WithTimeout(0.5_s)
-.AndThen(frc2::cmd::RunOnce([this]() {
-ResetPoseFromLimelight();
-// Tighten vision trust right at the start since we have a clear tag view
-poseEstimator->SetVisionMeasurementStdDevs({0.1, 0.1, 686367.69});
-}));
-};
 
 /*
 turret no longer moves....
@@ -887,7 +888,9 @@ auto makeAlignTurretCommand = [this]() {
 
     
 
-  } else if (m_selectedOption == kOption2 && isRed) {
+  } 
+  
+  else if (m_selectedOption == kOption2 && isRed) {
 
     //red left auto
     frc::Pose2d startPose = redleftpathrotate->getStartingHolonomicPose().value();
@@ -915,9 +918,12 @@ auto makeAlignTurretCommand = [this]() {
     //stops everything
     .AndThen(makeStopFlywheelCommand().AlongWith(makeStopIndexerCommand()).AlongWith(makeStopIntakeCommand()));
       
-  } else if (m_selectedOption == kOption3 && isRed) {
-    
-    //red center
+  } 
+  
+  
+  else if (m_selectedOption == kOption3 && isRed) {
+
+    //red center auto
     frc::Pose2d startPose = redcenterback->getStartingHolonomicPose().value();
     autoCommand =
     //reset pose at start of path
@@ -943,27 +949,93 @@ auto makeAlignTurretCommand = [this]() {
     //stops everything
     .AndThen(makeStopFlywheelCommand().AlongWith(makeStopIndexerCommand()).AlongWith(makeStopIntakeCommand()));
 
-
-  } else if (m_selectedOption == kOption1 && !isRed) {
-    //blue right
+  } 
+  
+  
+  else if (m_selectedOption == kOption1 && !isRed) {
+    //blue right auto
     frc::Pose2d startPose = bluerightpathrotate->getStartingHolonomicPose().value();
     autoCommand =
     //reset pose at start of path
     pathplanner::AutoBuilder::resetOdom(startPose)
+    //first go back while spinning up flywheel
+    .AndThen(pathplanner::AutoBuilder::followPath(bluerightpathrotate).AlongWith(makeSpinFlywheelCommand()))
+    //SHOOT
+    .AndThen(makeSpinIndexerCommand())
+    //wait 3 seconds before stopping
+    .AndThen(frc2::cmd::Wait(3_s)) 
+    //After done, stop both indexer and flywheel
+    .AndThen(makeStopFlywheelCommand().AlongWith(makeStopIndexerCommand()))
+    //go to the center while spinning intake motors
+    .AndThen(pathplanner::AutoBuilder::followPath(bluerightpathcenter).AlongWith(makeSpinIntakeCommand()))
+    //goes on the intake path
+    .AndThen(pathplanner::AutoBuilder::followPath(bluerightpathintake))
+    //comes back and stops intake motors, while spinning up flywheel
+    .AndThen(pathplanner::AutoBuilder::followPath(bluerightpathback).AlongWith(makeStopIntakeCommand().AlongWith(makeSpinFlywheelCommand())))
+    //spins indexer (shoots)
+    .AndThen(makeSpinIndexerCommand())
+    //wait 6 seconds 
+    .AndThen(frc2::cmd::Wait(6_s)) 
+    //stops everything
+    .AndThen(makeStopFlywheelCommand().AlongWith(makeStopIndexerCommand()).AlongWith(makeStopIntakeCommand()));
 
-  } else if (m_selectedOption == kOption2 && !isRed) {
-    //blue left
+  } 
+  
+  else if (m_selectedOption == kOption2 && !isRed) {
+    //blue left auto
     frc::Pose2d startPose = blueleftpathrotate->getStartingHolonomicPose().value();
     autoCommand =
     //reset pose at start of path
     pathplanner::AutoBuilder::resetOdom(startPose)
+    //first go back while spinning up flywheel
+    .AndThen(pathplanner::AutoBuilder::followPath(blueleftpathrotate).AlongWith(makeSpinFlywheelCommand()))
+    //SHOOT
+    .AndThen(makeSpinIndexerCommand())
+    //wait 3 seconds before stopping
+    .AndThen(frc2::cmd::Wait(3_s)) 
+    //After done, stop both indexer and flywheel
+    .AndThen(makeStopFlywheelCommand().AlongWith(makeStopIndexerCommand()))
+    //go to the center while spinning intake motors
+    .AndThen(pathplanner::AutoBuilder::followPath(blueleftpathcenter).AlongWith(makeSpinIntakeCommand()))
+    //goes on the intake path
+    .AndThen(pathplanner::AutoBuilder::followPath(blueleftpathintake))
+    //comes back and stops intake motors, while spinning up flywheel
+    .AndThen(pathplanner::AutoBuilder::followPath(blueleftpathback).AlongWith(makeStopIntakeCommand().AlongWith(makeSpinFlywheelCommand())))
+    //spins indexer (shoots)
+    .AndThen(makeSpinIndexerCommand())
+    //wait 6 seconds 
+    .AndThen(frc2::cmd::Wait(6_s)) 
+    //stops everything
+    .AndThen(makeStopFlywheelCommand().AlongWith(makeStopIndexerCommand()).AlongWith(makeStopIntakeCommand()));
 
-  } else {
-    //blue center
+  } 
+  
+  else {
+    //blue center auto
     frc::Pose2d startPose = bluecenterback->getStartingHolonomicPose().value();
     autoCommand =
     //reset pose at start of path
-    pathplanner::AutoBuilder::resetOdom(startPose)
+    pathplanner::AutoBuilder::resetOdom(startPose)  
+    //first go back while spinning up flywheel
+    .AndThen(pathplanner::AutoBuilder::followPath(bluecenterback).AlongWith(makeSpinFlywheelCommand()))
+    //SHOOT
+    .AndThen(makeSpinIndexerCommand())
+    //wait 3 seconds before stopping
+    .AndThen(frc2::cmd::Wait(3_s)) 
+    //After done, stop both indexer and flywheel
+    .AndThen(makeStopFlywheelCommand().AlongWith(makeStopIndexerCommand()))
+    //go to the pile
+    .AndThen(pathplanner::AutoBuilder::followPath(bluecenterpile).AlongWith(makeSpinIntakeCommand()))
+    //goes on the intake path
+    .AndThen(pathplanner::AutoBuilder::followPath(bluecenterintake))
+    //comes back and stops intake motors, while spinning up flywheel
+    .AndThen(pathplanner::AutoBuilder::followPath(bluecenterpileback).AlongWith(makeStopIntakeCommand().AlongWith(makeSpinFlywheelCommand())))
+    //spins indexer (shoots)
+    .AndThen(makeSpinIndexerCommand())
+    //wait 6 seconds 
+    .AndThen(frc2::cmd::Wait(6_s)) 
+    //stops everything
+    .AndThen(makeStopFlywheelCommand().AlongWith(makeStopIndexerCommand()).AlongWith(makeStopIntakeCommand()));
 
   }
 
