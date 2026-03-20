@@ -867,6 +867,7 @@ auto makeAlignTurretCommand = [this]() {
     pathplanner::AutoBuilder::resetOdom(startPose)
     //first go back while spinning up flywheel
     .AndThen(pathplanner::AutoBuilder::followPath(redrightpathrotate).AlongWith(makeSpinFlywheelCommand()))
+    .AndThen(frc2::cmd::Wait(1_s))
     //SHOOT
     .AndThen(makeSpinIndexerCommand())
     //wait 3 seconds before stopping
