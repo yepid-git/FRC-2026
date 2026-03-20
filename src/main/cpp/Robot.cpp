@@ -1193,6 +1193,15 @@ void TeleopPeriodic() {
   */
 
 
+  //temporary turret functionality
+  if (controller2.GetPOV() == 0){
+    VerticalTurret.Set(-VerticalSpeed);
+  } else if (controller2.GetPOV() == 270){
+    VerticalTurret.Set(VerticalSpeed);
+  } else {
+    VerticalTurret.StopMotor();
+  }
+
   //hopper code
   if (controller2.GetRightTriggerAxis() || controller.GetPOV() == 90){
     Hopper.Set(HopperSpeed);
