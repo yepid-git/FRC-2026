@@ -516,7 +516,7 @@ void RobotInit(){
   auto driveRobotRelative = [this](frc::ChassisSpeeds speeds, pathplanner::DriveFeedforwards ff) {
     speeds = frc::ChassisSpeeds::Discretize(speeds, 0.02_s);
     auto modules = kinematics.ToSwerveModuleStates(speeds);
-    kinematics.DesaturateWheelSpeeds(&modules, 4_mps);
+    //kinematics.DesaturateWheelSpeeds(&modules, 4_mps); no more limits!!!
     auto [fl, fr, bl, br] = modules;
 
     frc::Rotation2d flAngle{units::radian_t{rotfl.GetEncoder().GetPosition()}};
@@ -552,8 +552,8 @@ void RobotInit(){
     getRobotRelativeSpeeds,
     driveRobotRelative,
     std::make_shared<pathplanner::PPHolonomicDriveController>(
-        pathplanner::PIDConstants(5.0, 0.0, 0.0),
-        pathplanner::PIDConstants(5.0, 0.0, 0.0)
+        pathplanner::PIDConstants(9.0, 0.0, 0.0), //translational pid
+        pathplanner::PIDConstants(9.0, 0.0, 0.0) //rotational pid
     ),
     config,
     []() {
@@ -760,7 +760,7 @@ auto makeStopIntakeCommand = [this]() {
 
 auto makeSpinFlywheelCommand = [this]() {
   return frc2::cmd::RunOnce([this]() {
-      pidfiresh.SetReference(1700, rev::spark::SparkBase::ControlType::kVelocity);
+      pidfiresh.SetReference(2100, rev::spark::SparkBase::ControlType::kVelocity);
   });
 };
 
@@ -900,6 +900,8 @@ auto makeAlignTurretCommand = [this]() {
     pathplanner::AutoBuilder::resetOdom(startPose)
     //first go back while spinning up flywheel
     .AndThen(pathplanner::AutoBuilder::followPath(redleftpathrotate).AlongWith(makeSpinFlywheelCommand()))
+    //wait a lil
+    .AndThen(frc2::cmd::Wait(0.5_s))
     //SHOOT
     .AndThen(makeSpinIndexerCommand())
     //wait 3 seconds before stopping
@@ -931,6 +933,8 @@ auto makeAlignTurretCommand = [this]() {
     pathplanner::AutoBuilder::resetOdom(startPose)  
     //first go back while spinning up flywheel
     .AndThen(pathplanner::AutoBuilder::followPath(redcenterback).AlongWith(makeSpinFlywheelCommand()))
+    //wait a lil
+    .AndThen(frc2::cmd::Wait(0.5_s))
     //SHOOT
     .AndThen(makeSpinIndexerCommand())
     //wait 3 seconds before stopping
@@ -961,6 +965,8 @@ auto makeAlignTurretCommand = [this]() {
     pathplanner::AutoBuilder::resetOdom(startPose)
     //first go back while spinning up flywheel
     .AndThen(pathplanner::AutoBuilder::followPath(bluerightpathrotate).AlongWith(makeSpinFlywheelCommand()))
+    //wait a lil
+    .AndThen(frc2::cmd::Wait(0.5_s))
     //SHOOT
     .AndThen(makeSpinIndexerCommand())
     //wait 3 seconds before stopping
@@ -990,6 +996,8 @@ auto makeAlignTurretCommand = [this]() {
     pathplanner::AutoBuilder::resetOdom(startPose)
     //first go back while spinning up flywheel
     .AndThen(pathplanner::AutoBuilder::followPath(blueleftpathrotate).AlongWith(makeSpinFlywheelCommand()))
+    //wait a lil
+    .AndThen(frc2::cmd::Wait(0.5_s))
     //SHOOT
     .AndThen(makeSpinIndexerCommand())
     //wait 3 seconds before stopping
@@ -1019,6 +1027,8 @@ auto makeAlignTurretCommand = [this]() {
     pathplanner::AutoBuilder::resetOdom(startPose)  
     //first go back while spinning up flywheel
     .AndThen(pathplanner::AutoBuilder::followPath(bluecenterback).AlongWith(makeSpinFlywheelCommand()))
+    //wait a lil
+    .AndThen(frc2::cmd::Wait(0.5_s))
     //SHOOT
     .AndThen(makeSpinIndexerCommand())
     //wait 3 seconds before stopping
