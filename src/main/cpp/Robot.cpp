@@ -80,15 +80,18 @@ class Robot : public frc::TimedRobot {
   double lastKnownAngle = 0.0;
   double lastKnownYaw = 0.0;  
 
+  //member for automatic rotation
+  frc::PIDController headingPID{0.03, 0.0, 0.001};
+
 
   double drivespeed = 5;
 
   //member for the auto command
   frc2::CommandPtr autoCommand = frc2::cmd::None();
 
-  //placeholder variable for the goal hub's position on the field
-  frc::Translation2d RedGoalPosition{11.612_m, 4.5_m};
-  frc::Translation2d BlueGoalPosition{4.612_m, 4.5_m};
+  //variables for the goal hub's position on the field
+  frc::Translation2d RedGoalPosition{11.904_m, 4.04_m};
+  frc::Translation2d BlueGoalPosition{4.612_m, 4.04_m};
   frc::Translation2d GoalPosition{};
 
 
@@ -586,17 +589,13 @@ void RobotPeriodic() {
     0, 0, 0, 0, 0 //sets yawrate, pitch, pitchrate, and roll to 0
   );
 
-  LimelightHelpers::PoseEstimate testPose = isRed ?
-    LimelightHelpers::getBotPoseEstimate_wpiRed_MegaTag2("") :
-    LimelightHelpers::getBotPoseEstimate_wpiBlue_MegaTag2("");
+  LimelightHelpers::PoseEstimate testPose = LimelightHelpers::getBotPoseEstimate_wpiBlue_MegaTag2("");
   frc::SmartDashboard::PutBoolean("Limelight Reachable: ", testPose.timestampSeconds.value() > 0);
 
   LimelightHelpers::PoseEstimate mt2;
 
   //if(color == 'b'){
-  mt2 = isRed ?
-    LimelightHelpers::getBotPoseEstimate_wpiRed_MegaTag2("") :
-    LimelightHelpers::getBotPoseEstimate_wpiBlue_MegaTag2("");
+  mt2 = LimelightHelpers::getBotPoseEstimate_wpiBlue_MegaTag2("");
   //}
   /* else {
   mt2 = LimelightHelpers::getBotPoseEstimate_wpiRed_MegaTag2("limelight");
@@ -609,7 +608,7 @@ void RobotPeriodic() {
 
   if (isTrustworthy) {
   poseEstimator->SetVisionMeasurementStdDevs(
-    {0.5, 0.5, 686367.69} // x, y, theta (ignore vision rotation)
+    {0.8, 0.8, 686367.69} // x, y, theta (ignore vision rotation)
   );
 
   frc::SmartDashboard::PutBoolean("mt2 is trustworthy", isTrustworthy);
@@ -1136,6 +1135,7 @@ void AutonomousPeriodic() {
 void TeleopInit() {
   autoCommand.Cancel();
   ahrs->SetAngleAdjustment(0.0);
+  lastKnownAngle = ahrs->GetAngle();
 
   //set trust in vision back to normal
   poseEstimator->SetVisionMeasurementStdDevs({0.5, 0.5, 686367.69});
@@ -1220,9 +1220,11 @@ void TeleopPeriodic() {
   if (controller2.GetLeftTriggerAxis() || controller.GetPOV() == 270){
     Hopper.Set(-HopperSpeed);
   } 
-  if ((!controller2.GetLeftTriggerAxis() && !controller2.GetRightTriggerAxis()) || (!controller.GetPOV() == 270 && !controller.GetPOV() == 90)){ 
+
+  if (!controller2.GetLeftTriggerAxis() && !controller2.GetRightTriggerAxis()
+    && controller.GetPOV() != 270 && controller.GetPOV() != 90) {
     Hopper.StopMotor();
-  }
+}
 
   if (controller.GetXButton()){
     xstop();
@@ -1543,9 +1545,7 @@ wpi::array<frc::SwerveModulePosition, 4> GetSwervePositions(){
 
 //helper function to reset pose based on limelight
 void ResetPoseFromLimelight() {
-LimelightHelpers::PoseEstimate llPose = isRed ?
-    LimelightHelpers::getBotPoseEstimate_wpiRed_MegaTag2("") :
-    LimelightHelpers::getBotPoseEstimate_wpiBlue_MegaTag2("");
+LimelightHelpers::PoseEstimate llPose = LimelightHelpers::getBotPoseEstimate_wpiBlue_MegaTag2("");
 
 frc::SmartDashboard::PutBoolean("Pose Reset Used Vision: ", llPose.tagCount >= 1);
 
@@ -1628,6 +1628,37 @@ void resetAll(){
   VerticalTurret.GetEncoder().SetPosition(45);
   HorizontalTurret.GetEncoder().SetPosition(-PI);
 }
+
+void alignBot(){
+  //gets vector from robot to goal, which can be used to find the angle
+  frc::Translation2d toGoal = GoalPosition - poseEstimator->GetEstimatedPosition().Translation();
+
+  //the target is actually 180 degrees away, since turret shoots behind robot
+  double targetDeg = toGoal.Angle().Degrees().value() + 180;
+
+  // normalize target to -180 to 180
+  while (targetDeg > 180)  targetDeg -= 360.0;
+  while (targetDeg < -180) targetDeg += 360.0;
+
+
+  //normalize current degrees to -180 to 180
+  double currentDeg = lastKnownAngle;
+  while (currentDeg > 180)  currentDeg -= 360.0;
+  while (currentDeg < -180) currentDeg += 360.0;
+
+  //normalize error
+  double error = targetDeg - currentDeg;
+  while (currentDeg > 180)  currentDeg -= 360.0;
+  while (currentDeg < -180) currentDeg += 360.0;
+
+  //grabs the output needed to achieve the rotation
+  double rotOutput = std::clamp(headingPID.Calculate(0, error), -1.0, 1.0);
+
+  //driver can translate, but the rotation gets handled by the pid calculation
+  Drive(-controller.GetLeftX(),-controller.GetLeftY(), rotOutput);
+
+}
+
 
 };
 
