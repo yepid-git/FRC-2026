@@ -1137,6 +1137,8 @@ void TeleopInit() {
   ahrs->SetAngleAdjustment(0.0);
   lastKnownAngle = ahrs->GetAngle();
 
+  headingPID.Reset();
+
   //set trust in vision back to normal
   poseEstimator->SetVisionMeasurementStdDevs({0.5, 0.5, 686367.69});
   //color change
@@ -1232,7 +1234,10 @@ void TeleopPeriodic() {
     wheelfr.GetClosedLoopController().SetIAccum(0);
     wheelbl.GetClosedLoopController().SetIAccum(0);
     wheelbr.GetClosedLoopController().SetIAccum(0);
-  } else { //if else structure makes it so drive and x-stop are mutually exclusive
+  } else if(controller.GetAButton()){
+    alignBot();
+  }
+  else { //if else structure makes it so drive and x-stop are mutually exclusive
   //x, y, turn
   //for now, just calling drive on it's own
   //joysticks are inverted because wpi NWU axes co-ordinate system is weird, search it up if interested
@@ -1261,6 +1266,9 @@ void TeleopPeriodic() {
     firesh.StopMotor();
   }
 
+  if(controller.GetAButtonPressed()){
+    headingPID.Reset();
+  }
 
   // B Button toggles field oriented drive
   if(controller.GetBButtonPressed()){
@@ -1648,14 +1656,14 @@ void alignBot(){
 
   //normalize error
   double error = targetDeg - currentDeg;
-  while (currentDeg > 180)  currentDeg -= 360.0;
-  while (currentDeg < -180) currentDeg += 360.0;
+  while (error > 180)  error -= 360.0;
+  while (error < -180) error += 360.0;
 
   //grabs the output needed to achieve the rotation
   double rotOutput = std::clamp(headingPID.Calculate(0, error), -1.0, 1.0);
 
   //driver can translate, but the rotation gets handled by the pid calculation
-  Drive(-controller.GetLeftX(),-controller.GetLeftY(), rotOutput);
+  Drive(-controller.GetLeftY(),-controller.GetLeftX(), rotOutput);
 
 }
 
