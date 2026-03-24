@@ -290,7 +290,13 @@ void RobotInit(){
   //sets the follower shooter to actually follow the leader
   shooterFollowerConfig
   .SetIdleMode(rev::spark::SparkBaseConfig::IdleMode::kCoast)
-  .Follow(firesh, true);
+    .SetIdleMode(rev::spark::SparkBaseConfig::IdleMode::kCoast)
+    .VoltageCompensation(12.0)       // ADD
+    .SmartCurrentLimit(100)          // ADD
+    .ClosedLoopRampRate(0.1)         // ADD
+    .OpenLoopRampRate(0.1)           // ADD
+    .Follow(firesh, true);
+
 
   hopperConfig
     .Inverted(true)
