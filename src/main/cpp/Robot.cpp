@@ -581,6 +581,11 @@ LimelightHelpers::setCameraPose_RobotSpace(
 
 
 void RobotPeriodic() {
+  //shooter rpms
+  frc::SmartDashboard::PutNumber("Shooter leader rpm:", firesh.GetEncoder().GetVelocity());
+  frc::SmartDashboard::PutNumber("Shooter follower rpm:", firesh2.GetEncoder().GetVelocity());
+
+
   GetSafeRotation(); // updates lastKnownAngle cache
   UpdatePose();
   LimelightHelpers::SetRobotOrientation(
