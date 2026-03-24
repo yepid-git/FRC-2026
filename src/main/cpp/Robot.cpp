@@ -279,10 +279,12 @@ void RobotInit(){
     .SmartCurrentLimit(100)
     .SetIdleMode(rev::spark::SparkBaseConfig::IdleMode::kCoast);
   
+
   shooterLeaderConfig.closedLoop
     .SetFeedbackSensor(rev::spark::FeedbackSensor::kPrimaryEncoder)
-    .Pid(0.001, 0.0, 0.0)
-    .VelocityFF(0.000147)
+    .Pid(0.0002, 0.0, 0.0)
+    //.VelocityFF(0.000147)
+    .VelocityFF(0.0015)
     //limit voltage
     //.OutputRange(-0.5, 0.5)
     .IZone(0);
