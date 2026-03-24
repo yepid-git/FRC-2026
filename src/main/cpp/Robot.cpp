@@ -591,6 +591,9 @@ void RobotPeriodic() {
   frc::SmartDashboard::PutNumber("Shooter leader rpm:", firesh.GetEncoder().GetVelocity());
   frc::SmartDashboard::PutNumber("Shooter follower rpm:", firesh2.GetEncoder().GetVelocity());
 
+  frc::SmartDashboard::PutNumber("Shooter leader voltage usage:", firesh.GetBusVoltage());
+  frc::SmartDashboard::PutNumber("Shooter follower voltage usage:", firesh2.GetBusVoltage());
+
 
   GetSafeRotation(); // updates lastKnownAngle cache
   UpdatePose();
