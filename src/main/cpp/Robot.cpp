@@ -1258,11 +1258,11 @@ void TeleopPeriodic() {
 
   //if bumper is pressed, fire both motors at the target rpm, otherwise set their velocities to 0
   if(controller2.GetXButton() || controller.GetAButton()){
-  pidfiresh.SetReference(
-      targetrpm,
-      rev::spark::SparkBase::ControlType::kVelocity
+    pidfiresh.SetReference(
+        targetrpm,
+        rev::spark::SparkBase::ControlType::kVelocity
   );
-  }else {
+  } else {
     firesh.StopMotor();
   }
 
