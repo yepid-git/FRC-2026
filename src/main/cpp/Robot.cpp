@@ -576,9 +576,9 @@ void RobotInit(){
 //should probably use sig figs but im scared
 LimelightHelpers::setCameraPose_RobotSpace(
     "",
-    0.2453941752,   // forward from center (positive = toward front)
-    -0.23021288476,   // side offset (positive = left)
-    0.29895206656,   // height from floor level of robot center
+    0.201695558,   // forward from center (positive = toward front)
+    -0.2302129,   // side offset (positive = left)
+    0.24851995,   // height from floor level of robot center
     0.0,   // roll
     0.0,  // pitch (negative = tilted down toward floor)
     180    // yaw (0 = facing forward)
