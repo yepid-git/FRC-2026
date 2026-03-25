@@ -1179,7 +1179,7 @@ void TeleopPeriodic() {
   //gyroscope resets when Y is pressed
   //moved into start of auto but kept here if needed during tele
   
-  if(controller.GetYButtonPressed()){
+  if(controller.GetStartButtonPressed()){
     //resets gyro heading, make sure robot is straight before doing this
     ResetGyro();
     ResetPoseFromLimelight();
@@ -1273,7 +1273,7 @@ void TeleopPeriodic() {
   double targetrpm = 1700;
 
   //if bumper is pressed, fire both motors at the target rpm, otherwise set their velocities to 0
-  if(controller2.GetXButton() || controller.GetAButton()){
+  if(controller2.GetXButton() || controller.GetYButton()){
     pidfiresh.SetReference(
         targetrpm,
         rev::spark::SparkBase::ControlType::kVelocity
