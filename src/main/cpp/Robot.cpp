@@ -219,6 +219,8 @@ void RobotInit(){
   frc::SmartDashboard::PutData("Auto Modes: ", &m_chooser);
 
 
+  //enables angle wrapping, similar to what we have in drive
+  headingPID.EnableContinuousInput(-180.0, 180.0);
 
   LimelightHelpers::setPipelineIndex("", 0);
   //i dont think the led is necessary im ngl
@@ -1159,14 +1161,17 @@ void TeleopInit() {
   poseEstimator->SetVisionMeasurementStdDevs({0.5, 0.5, 686367.69});
   //color change
   auto alliance = frc::DriverStation::GetAlliance();
-  //handles flipping of coordinates 
   if (alliance && alliance.value() == frc::DriverStation::Alliance::kRed) {
-    GoalPosition = RedGoalPosition;
+    ahrs->SetAngleAdjustment(180);
     isRed = true;
+    GoalPosition = RedGoalPosition;
   } else {
-    GoalPosition = BlueGoalPosition;
+    ahrs->SetAngleAdjustment(0);
     isRed = false;
+    GoalPosition = BlueGoalPosition;
   }
+lastKnownAngle = ahrs->GetAngle();
+
   time.Stop();
   time.Reset();
 }
@@ -1345,7 +1350,7 @@ void AlignTurret(){
   units::radian_t targetRad_unit{targetRad};
 
   frc::SmartDashboard::PutNumber("Target Rad: ", targetRad);
-  frc::SmartDashboard::PutNumber("Butt: ", double(turretlimit.Calculate(targetRad_unit)));
+  frc::SmartDashboard::PutNumber("Target rad with limit: ", double(turretlimit.Calculate(targetRad_unit)));
 
   //Sets the rotational motor's angle, to that position
   HorizontalTurret.GetClosedLoopController().SetReference(
@@ -1658,7 +1663,7 @@ void alignBot(){
   frc::Translation2d toGoal = GoalPosition - poseEstimator->GetEstimatedPosition().Translation();
 
   //the target is actually 180 degrees away, since turret shoots behind robot
-  double targetDeg = toGoal.Angle().Degrees().value();
+  double targetDeg = toGoal.Angle().Degrees().value() + 180.0;
 
   // normalize target to -180 to 180
   while (targetDeg > 180)  targetDeg -= 360.0;
@@ -1676,10 +1681,10 @@ void alignBot(){
   while (error < -180) error += 360.0;
 
   //grabs the output needed to achieve the rotation
-  double rotOutput = std::clamp(headingPID.Calculate(0, error), -1.0, 1.0);
+  double rotOutput = std::clamp(headingPID.Calculate(currentDeg, targetDeg), -1.0, 1.0);
 
   //driver can translate, but the rotation gets handled by the pid calculation
-  Drive(-controller.GetLeftY(),-controller.GetLeftX(), -rotOutput);
+  Drive(-controller.GetLeftY(),-controller.GetLeftX(), rotOutput);
 
 }
 
