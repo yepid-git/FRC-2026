@@ -282,9 +282,9 @@ void RobotInit(){
 
   shooterLeaderConfig.closedLoop
     .SetFeedbackSensor(rev::spark::FeedbackSensor::kPrimaryEncoder)
-    .Pid(0.0002, 0.0, 0.0)
+    .Pid(0.0001, 0.0000005, 0.00000)
     //.VelocityFF(0.000147)
-    .VelocityFF(0.0015)
+    .VelocityFF(0.0019)
     //limit voltage
     //.OutputRange(-0.5, 0.5)
     .IZone(0);
@@ -1679,7 +1679,7 @@ void alignBot(){
   double rotOutput = std::clamp(headingPID.Calculate(0, error), -1.0, 1.0);
 
   //driver can translate, but the rotation gets handled by the pid calculation
-  Drive(-controller.GetLeftY(),-controller.GetLeftX(), rotOutput);
+  Drive(-controller.GetLeftY(),-controller.GetLeftX(), -rotOutput);
 
 }
 
