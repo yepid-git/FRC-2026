@@ -81,7 +81,7 @@ class Robot : public frc::TimedRobot {
   double lastKnownYaw = 0.0;  
 
   //member for automatic rotation
-  frc::PIDController headingPID{0.03, 0.0, 0.001};
+  frc::PIDController headingPID{0.003, 0.0, 0.001};
 
 
   double drivespeed = 5;
@@ -1658,7 +1658,7 @@ void alignBot(){
   frc::Translation2d toGoal = GoalPosition - poseEstimator->GetEstimatedPosition().Translation();
 
   //the target is actually 180 degrees away, since turret shoots behind robot
-  double targetDeg = toGoal.Angle().Degrees().value() + 180;
+  double targetDeg = toGoal.Angle().Degrees().value();
 
   // normalize target to -180 to 180
   while (targetDeg > 180)  targetDeg -= 360.0;
