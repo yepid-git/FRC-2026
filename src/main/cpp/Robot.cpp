@@ -565,8 +565,8 @@ void RobotInit(){
     getRobotRelativeSpeeds,
     driveRobotRelative,
     std::make_shared<pathplanner::PPHolonomicDriveController>(
-        pathplanner::PIDConstants(9.0, 0.0, 0.0), //translational pid
-        pathplanner::PIDConstants(9.0, 0.0, 0.0) //rotational pid
+        pathplanner::PIDConstants(5.0, 0.0, 0.0), //translational pid
+        pathplanner::PIDConstants(3.0, 0.0, 0.1) //rotational pid
     ),
     config,
     []() {
@@ -622,7 +622,8 @@ void RobotPeriodic() {
   //only trust megatag when there is at least one tag, and the robot isn't rotating at unreasonable speed
   //also ensures megatag is trustworthy only when the gyro is healthy
   bool gyroHealthy = ahrs->IsConnected() && !ahrs->IsCalibrating();
-  bool isTrustworthy = mt2.tagCount >= 1 && std::abs(ahrs->GetRate()) < 720.0 && gyroHealthy; 
+  bool isAutoActive = frc::DriverStation::IsAutonomousEnabled();
+  bool isTrustworthy = mt2.tagCount >= 1 && std::abs(ahrs->GetRate()) < 180.0 && gyroHealthy && !isAutoActive; 
 
   if (isTrustworthy) {
   poseEstimator->SetVisionMeasurementStdDevs(
