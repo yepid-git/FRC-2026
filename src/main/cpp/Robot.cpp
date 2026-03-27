@@ -887,8 +887,8 @@ auto makeAlignTurretCommand = [this]() {
     .AndThen(frc2::cmd::Wait(1_s))
     //SHOOT
     .AndThen(makeSpinIndexerCommand())
-    //wait 3 seconds before stopping
-    .AndThen(frc2::cmd::Wait(3_s)) 
+    //wait 6 seconds before stopping
+    .AndThen(frc2::cmd::Wait(6_s)) 
     //After done, stop both indexer and flywheel
     .AndThen(makeStopFlywheelCommand().AlongWith(makeStopIndexerCommand()))
     //go to the center while spinning intake motors
