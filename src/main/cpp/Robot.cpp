@@ -801,6 +801,19 @@ auto makeStopIndexerCommand = [this]() {
 };
 
 
+auto makeSpinHopperCommand = [this]() {
+  return frc2::cmd::RunOnce([this]() {
+      Hopper.Set(-HopperSpeed);
+  });
+};
+
+
+auto makeStopHopperCommand = [this]() {
+  return frc2::cmd::RunOnce([this]() {
+      Hopper.StopMotor();
+  });
+};
+
 /*
 turret no longer moves....
 auto PutTurretBack = [this](){
@@ -887,11 +900,11 @@ auto makeAlignTurretCommand = [this]() {
     .AndThen(pathplanner::AutoBuilder::followPath(redrightpathrotate).AlongWith(makeSpinFlywheelCommand()))
     .AndThen(frc2::cmd::Wait(1_s))
     //SHOOT
-    .AndThen(makeSpinIndexerCommand())
-    //wait 6 seconds before stopping
-    .AndThen(frc2::cmd::Wait(6_s)) 
+    .AndThen(makeSpinIndexerCommand().AlongWith(makeSpinHopperCommand()))
+    //wait some seconds before stopping
+    .AndThen(frc2::cmd::Wait(5_s)) 
     //After done, stop both indexer and flywheel
-    .AndThen(makeStopFlywheelCommand().AlongWith(makeStopIndexerCommand()))
+    .AndThen(makeStopFlywheelCommand().AlongWith(makeStopIndexerCommand()).AlongWith(makeStopHopperCommand()))
     //go to the center while spinning intake motors
     .AndThen(pathplanner::AutoBuilder::followPath(redrightpathcenter).AlongWith(makeSpinIntakeCommand()))
     //goes on the intake path
@@ -899,11 +912,11 @@ auto makeAlignTurretCommand = [this]() {
     //comes back and stops intake motors, while spinning up flywheel
     .AndThen(pathplanner::AutoBuilder::followPath(redrightpathback).AlongWith(makeStopIntakeCommand().AlongWith(makeSpinFlywheelCommand())))
     //spins indexer (shoots)
-    .AndThen(makeSpinIndexerCommand())
+    .AndThen(makeSpinIndexerCommand().AlongWith(makeSpinHopperCommand()))
     //wait 6 seconds 
     .AndThen(frc2::cmd::Wait(6_s)) 
     //stops everything
-    .AndThen(makeStopFlywheelCommand().AlongWith(makeStopIndexerCommand()).AlongWith(makeStopIntakeCommand()));
+    .AndThen(makeStopFlywheelCommand().AlongWith(makeStopIndexerCommand()).AlongWith(makeStopIntakeCommand()).AlongWith(makeStopHopperCommand()));
 
     
 
@@ -918,14 +931,13 @@ auto makeAlignTurretCommand = [this]() {
     pathplanner::AutoBuilder::resetOdom(startPose)
     //first go back while spinning up flywheel
     .AndThen(pathplanner::AutoBuilder::followPath(redleftpathrotate).AlongWith(makeSpinFlywheelCommand()))
-    //wait a lil
-    .AndThen(frc2::cmd::Wait(0.5_s))
+    .AndThen(frc2::cmd::Wait(1_s))
     //SHOOT
-    .AndThen(makeSpinIndexerCommand())
-    //wait 3 seconds before stopping
-    .AndThen(frc2::cmd::Wait(3_s)) 
+    .AndThen(makeSpinIndexerCommand().AlongWith(makeSpinHopperCommand()))
+    //wait some seconds before stopping
+    .AndThen(frc2::cmd::Wait(5_s)) 
     //After done, stop both indexer and flywheel
-    .AndThen(makeStopFlywheelCommand().AlongWith(makeStopIndexerCommand()))
+    .AndThen(makeStopFlywheelCommand().AlongWith(makeStopIndexerCommand()).AlongWith(makeStopHopperCommand()))
     //go to the center while spinning intake motors
     .AndThen(pathplanner::AutoBuilder::followPath(redleftpathcenter).AlongWith(makeSpinIntakeCommand()))
     //goes on the intake path
@@ -933,11 +945,12 @@ auto makeAlignTurretCommand = [this]() {
     //comes back and stops intake motors, while spinning up flywheel
     .AndThen(pathplanner::AutoBuilder::followPath(redleftpathback).AlongWith(makeStopIntakeCommand().AlongWith(makeSpinFlywheelCommand())))
     //spins indexer (shoots)
-    .AndThen(makeSpinIndexerCommand())
+    .AndThen(makeSpinIndexerCommand().AlongWith(makeSpinHopperCommand()))
     //wait 6 seconds 
     .AndThen(frc2::cmd::Wait(6_s)) 
     //stops everything
-    .AndThen(makeStopFlywheelCommand().AlongWith(makeStopIndexerCommand()).AlongWith(makeStopIntakeCommand()));
+    .AndThen(makeStopFlywheelCommand().AlongWith(makeStopIndexerCommand()).AlongWith(makeStopIntakeCommand()).AlongWith(makeStopHopperCommand()));
+
       
   } 
   
@@ -954,11 +967,11 @@ auto makeAlignTurretCommand = [this]() {
     //wait a lil
     .AndThen(frc2::cmd::Wait(0.5_s))
     //SHOOT
-    .AndThen(makeSpinIndexerCommand())
+    .AndThen(makeSpinIndexerCommand().AlongWith(makeSpinHopperCommand()))
     //wait 3 seconds before stopping
     .AndThen(frc2::cmd::Wait(3_s)) 
     //After done, stop both indexer and flywheel
-    .AndThen(makeStopFlywheelCommand().AlongWith(makeStopIndexerCommand()))
+    .AndThen(makeStopFlywheelCommand().AlongWith(makeStopIndexerCommand()).AlongWith(makeStopHopperCommand()))
     //go to the pile
     .AndThen(pathplanner::AutoBuilder::followPath(redcenterpile).AlongWith(makeSpinIntakeCommand()))
     //goes on the intake path
@@ -966,11 +979,11 @@ auto makeAlignTurretCommand = [this]() {
     //comes back and stops intake motors, while spinning up flywheel
     .AndThen(pathplanner::AutoBuilder::followPath(redcenterpileback).AlongWith(makeStopIntakeCommand().AlongWith(makeSpinFlywheelCommand())))
     //spins indexer (shoots)
-    .AndThen(makeSpinIndexerCommand())
+    .AndThen(makeSpinIndexerCommand().AlongWith(makeSpinHopperCommand()))
     //wait 6 seconds 
     .AndThen(frc2::cmd::Wait(6_s)) 
     //stops everything
-    .AndThen(makeStopFlywheelCommand().AlongWith(makeStopIndexerCommand()).AlongWith(makeStopIntakeCommand()));
+    .AndThen(makeStopFlywheelCommand().AlongWith(makeStopIndexerCommand()).AlongWith(makeStopIntakeCommand()).AlongWith(makeStopHopperCommand()));
 
   } 
   
@@ -983,14 +996,13 @@ auto makeAlignTurretCommand = [this]() {
     pathplanner::AutoBuilder::resetOdom(startPose)
     //first go back while spinning up flywheel
     .AndThen(pathplanner::AutoBuilder::followPath(bluerightpathrotate).AlongWith(makeSpinFlywheelCommand()))
-    //wait a lil
-    .AndThen(frc2::cmd::Wait(0.5_s))
+    .AndThen(frc2::cmd::Wait(1_s))
     //SHOOT
-    .AndThen(makeSpinIndexerCommand())
-    //wait 3 seconds before stopping
-    .AndThen(frc2::cmd::Wait(3_s)) 
+    .AndThen(makeSpinIndexerCommand().AlongWith(makeSpinHopperCommand()))
+    //wait some seconds before stopping
+    .AndThen(frc2::cmd::Wait(5_s)) 
     //After done, stop both indexer and flywheel
-    .AndThen(makeStopFlywheelCommand().AlongWith(makeStopIndexerCommand()))
+    .AndThen(makeStopFlywheelCommand().AlongWith(makeStopIndexerCommand()).AlongWith(makeStopHopperCommand()))
     //go to the center while spinning intake motors
     .AndThen(pathplanner::AutoBuilder::followPath(bluerightpathcenter).AlongWith(makeSpinIntakeCommand()))
     //goes on the intake path
@@ -998,11 +1010,11 @@ auto makeAlignTurretCommand = [this]() {
     //comes back and stops intake motors, while spinning up flywheel
     .AndThen(pathplanner::AutoBuilder::followPath(bluerightpathback).AlongWith(makeStopIntakeCommand().AlongWith(makeSpinFlywheelCommand())))
     //spins indexer (shoots)
-    .AndThen(makeSpinIndexerCommand())
+    .AndThen(makeSpinIndexerCommand().AlongWith(makeSpinHopperCommand()))
     //wait 6 seconds 
     .AndThen(frc2::cmd::Wait(6_s)) 
     //stops everything
-    .AndThen(makeStopFlywheelCommand().AlongWith(makeStopIndexerCommand()).AlongWith(makeStopIntakeCommand()));
+    .AndThen(makeStopFlywheelCommand().AlongWith(makeStopIndexerCommand()).AlongWith(makeStopIntakeCommand()).AlongWith(makeStopHopperCommand()));
 
   } 
   
@@ -1014,14 +1026,13 @@ auto makeAlignTurretCommand = [this]() {
     pathplanner::AutoBuilder::resetOdom(startPose)
     //first go back while spinning up flywheel
     .AndThen(pathplanner::AutoBuilder::followPath(blueleftpathrotate).AlongWith(makeSpinFlywheelCommand()))
-    //wait a lil
-    .AndThen(frc2::cmd::Wait(0.5_s))
+    .AndThen(frc2::cmd::Wait(1_s))
     //SHOOT
-    .AndThen(makeSpinIndexerCommand())
-    //wait 3 seconds before stopping
-    .AndThen(frc2::cmd::Wait(3_s)) 
+    .AndThen(makeSpinIndexerCommand().AlongWith(makeSpinHopperCommand()))
+    //wait some seconds before stopping
+    .AndThen(frc2::cmd::Wait(5_s)) 
     //After done, stop both indexer and flywheel
-    .AndThen(makeStopFlywheelCommand().AlongWith(makeStopIndexerCommand()))
+    .AndThen(makeStopFlywheelCommand().AlongWith(makeStopIndexerCommand()).AlongWith(makeStopHopperCommand()))
     //go to the center while spinning intake motors
     .AndThen(pathplanner::AutoBuilder::followPath(blueleftpathcenter).AlongWith(makeSpinIntakeCommand()))
     //goes on the intake path
@@ -1029,11 +1040,11 @@ auto makeAlignTurretCommand = [this]() {
     //comes back and stops intake motors, while spinning up flywheel
     .AndThen(pathplanner::AutoBuilder::followPath(blueleftpathback).AlongWith(makeStopIntakeCommand().AlongWith(makeSpinFlywheelCommand())))
     //spins indexer (shoots)
-    .AndThen(makeSpinIndexerCommand())
+    .AndThen(makeSpinIndexerCommand().AlongWith(makeSpinHopperCommand()))
     //wait 6 seconds 
     .AndThen(frc2::cmd::Wait(6_s)) 
     //stops everything
-    .AndThen(makeStopFlywheelCommand().AlongWith(makeStopIndexerCommand()).AlongWith(makeStopIntakeCommand()));
+    .AndThen(makeStopFlywheelCommand().AlongWith(makeStopIndexerCommand()).AlongWith(makeStopIntakeCommand()).AlongWith(makeStopHopperCommand()));
 
   } 
   
@@ -1048,11 +1059,11 @@ auto makeAlignTurretCommand = [this]() {
     //wait a lil
     .AndThen(frc2::cmd::Wait(0.5_s))
     //SHOOT
-    .AndThen(makeSpinIndexerCommand())
+    .AndThen(makeSpinIndexerCommand().AlongWith(makeSpinHopperCommand()))
     //wait 3 seconds before stopping
     .AndThen(frc2::cmd::Wait(3_s)) 
     //After done, stop both indexer and flywheel
-    .AndThen(makeStopFlywheelCommand().AlongWith(makeStopIndexerCommand()))
+    .AndThen(makeStopFlywheelCommand().AlongWith(makeStopIndexerCommand()).AlongWith(makeStopHopperCommand()))
     //go to the pile
     .AndThen(pathplanner::AutoBuilder::followPath(bluecenterpile).AlongWith(makeSpinIntakeCommand()))
     //goes on the intake path
@@ -1060,11 +1071,11 @@ auto makeAlignTurretCommand = [this]() {
     //comes back and stops intake motors, while spinning up flywheel
     .AndThen(pathplanner::AutoBuilder::followPath(bluecenterpileback).AlongWith(makeStopIntakeCommand().AlongWith(makeSpinFlywheelCommand())))
     //spins indexer (shoots)
-    .AndThen(makeSpinIndexerCommand())
+    .AndThen(makeSpinIndexerCommand().AlongWith(makeSpinHopperCommand()))
     //wait 6 seconds 
     .AndThen(frc2::cmd::Wait(6_s)) 
     //stops everything
-    .AndThen(makeStopFlywheelCommand().AlongWith(makeStopIndexerCommand()).AlongWith(makeStopIntakeCommand()));
+    .AndThen(makeStopFlywheelCommand().AlongWith(makeStopIndexerCommand()).AlongWith(makeStopIntakeCommand()).AlongWith(makeStopHopperCommand()));
 
   }
 
