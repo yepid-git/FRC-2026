@@ -72,7 +72,7 @@ class Robot : public frc::TimedRobot {
   double VerticalSpeed = 0.1; 
   double HorizontalSpeed = 0.1;
   double IndexerSpeed = 1;
-  double HopperSpeed = 0.4; 
+  double HopperSpeed = 0.6; 
   double HangSpeed = 0.5;
   double IntakeSpeed = 0.7;
 
@@ -390,7 +390,7 @@ void RobotInit(){
   driveConfig.SmartCurrentLimit(40);        // each drive wheel
   steerConfig.SmartCurrentLimit(40);        // each steer motor
   HangConfig.SmartCurrentLimit(40);
-  hopperConfig.SmartCurrentLimit(20);
+  hopperConfig.SmartCurrentLimit(30);
   HorizontalTurretConfig.SmartCurrentLimit(15);
   VerticalTurretConfig.SmartCurrentLimit(15);
   
@@ -565,8 +565,8 @@ void RobotInit(){
     getRobotRelativeSpeeds,
     driveRobotRelative,
     std::make_shared<pathplanner::PPHolonomicDriveController>(
-        pathplanner::PIDConstants(5.0, 0.0, 0.0), //translational pid
-        pathplanner::PIDConstants(3.0, 0.0, 0.1) //rotational pid
+        pathplanner::PIDConstants(7.5, 0.15, 0.0), //translational pid
+        pathplanner::PIDConstants(5.5, 0.2, 0.0) //rotational pid
     ),
     config,
     []() {
@@ -778,7 +778,7 @@ auto makeStopIntakeCommand = [this]() {
 
 auto makeSpinFlywheelCommand = [this]() {
   return frc2::cmd::RunOnce([this]() {
-      pidfiresh.SetReference(2100, rev::spark::SparkBase::ControlType::kVelocity);
+      pidfiresh.SetReference(1700, rev::spark::SparkBase::ControlType::kVelocity);
   });
 };
 
@@ -807,6 +807,11 @@ auto makeSpinHopperCommand = [this]() {
   });
 };
 
+auto makeSpinHopperRevCommand = [this]() {
+  return frc2::cmd::RunOnce([this]() {
+      Hopper.Set(HopperSpeed);
+  });
+};
 
 auto makeStopHopperCommand = [this]() {
   return frc2::cmd::RunOnce([this]() {
@@ -910,9 +915,10 @@ auto makeAlignTurretCommand = [this]() {
     //goes on the intake path
     .AndThen(pathplanner::AutoBuilder::followPath(redrightpathintake))
     //comes back and stops intake motors, while spinning up flywheel
-    .AndThen(pathplanner::AutoBuilder::followPath(redrightpathback).AlongWith(makeStopIntakeCommand().AlongWith(makeSpinFlywheelCommand())))
+    .AndThen(pathplanner::AutoBuilder::followPath(redrightpathback).AlongWith(makeSpinFlywheelCommand()))
     //spins indexer (shoots)
-    .AndThen(makeSpinIndexerCommand().AlongWith(makeSpinHopperCommand()))
+    .AndThen(makeSpinIndexerCommand().AlongWith(makeSpinHopperCommand()).AlongWith(makeStopIntakeCommand()))
+
     //wait 6 seconds 
     .AndThen(frc2::cmd::Wait(6_s)) 
     //stops everything
@@ -971,13 +977,13 @@ auto makeAlignTurretCommand = [this]() {
     //wait 3 seconds before stopping
     .AndThen(frc2::cmd::Wait(3_s)) 
     //After done, stop both indexer and flywheel
-    .AndThen(makeStopFlywheelCommand().AlongWith(makeStopIndexerCommand()).AlongWith(makeStopHopperCommand()))
+    .AndThen(makeStopFlywheelCommand().AlongWith(makeStopIndexerCommand()).AlongWith(makeStopHopperCommand()).AlongWith(makeSpinIntakeCommand()))
     //go to the pile
-    .AndThen(pathplanner::AutoBuilder::followPath(redcenterpile).AlongWith(makeSpinIntakeCommand()))
+    .AndThen(pathplanner::AutoBuilder::followPath(redcenterpile).AlongWith(makeSpinHopperRevCommand()))
     //goes on the intake path
     .AndThen(pathplanner::AutoBuilder::followPath(redcenterintake))
     //comes back and stops intake motors, while spinning up flywheel
-    .AndThen(pathplanner::AutoBuilder::followPath(redcenterpileback).AlongWith(makeStopIntakeCommand().AlongWith(makeSpinFlywheelCommand())))
+    .AndThen(pathplanner::AutoBuilder::followPath(redcenterpileback).AlongWith(makeSpinFlywheelCommand()))
     //spins indexer (shoots)
     .AndThen(makeSpinIndexerCommand().AlongWith(makeSpinHopperCommand()))
     //wait 6 seconds 
@@ -1286,8 +1292,8 @@ void TeleopPeriodic() {
   // }
 
   //shooter code
-  //actual rpm is targetrpm * 22/15
-  double targetrpm = 1700;
+  //actual rpm is targerpm * 22/15
+  double targetrpm = 1800;
 
   //if bumper is pressed, fire both motors at the target rpm, otherwise set their velocities to 0
   if(controller2.GetXButton() || controller.GetYButton()){
@@ -1304,9 +1310,11 @@ void TeleopPeriodic() {
   }
 
   // B Button toggles field oriented drive
+  /*
   if(controller.GetBButtonPressed()){
     fieldOriented = !fieldOriented;
   }
+    */
 
 
   //controller triggers set indexer velocity
