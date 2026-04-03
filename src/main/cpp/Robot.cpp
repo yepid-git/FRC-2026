@@ -1489,7 +1489,7 @@ void Drive(double x, double y, double rotate){
   auto modules = kinematics.ToSwerveModuleStates(speeds);
 
   //safety to prevent wheels from spinning too fast
-  //kinematics.DesaturateWheelSpeeds(&modules, 5_mps);
+  kinematics.DesaturateWheelSpeeds(&modules, 10_mps);
 
   //just stores the swerve module states in each motor
   auto [fl, fr, bl, br] = modules;
