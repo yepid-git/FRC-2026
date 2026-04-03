@@ -74,7 +74,6 @@ class Robot : public frc::TimedRobot {
   double IndexerSpeed = 1;
   double HopperSpeed = 0.6; 
   double HangSpeed = 0.5;
-  double IntakeSpeed = 0.7;
 
   //member for the last known angle, avoid bad gyro readings during disconnections (if happens)
   double lastKnownAngle = 0.0;
@@ -191,8 +190,8 @@ class Robot : public frc::TimedRobot {
   frc::SwerveDriveKinematics<4> kinematics{
     m_frontLeftLocation, m_frontRightLocation, m_backLeftLocation,
         m_backRightLocation};
-  frc::XboxController controller{0}; //1st controller: drive, intake, indexer, reset functionalities
-  frc::XboxController controller2{1}; //2nd controller: shoot wheels, horizontal & vertical turret, auto turret, hopper (forwards/backwards)
+  frc::XboxController controller{0};
+  //frc::XboxController controller2{1}; maybe use later
 
   //limits acceleration to 6m/s^2
   frc::SlewRateLimiter<units::meters_per_second> limitx{3_mps / .5_s};
@@ -1210,31 +1209,31 @@ void TeleopPeriodic() {
     HorizontalTurret.GetEncoder().SetPosition(-PI);
   }
 
-  /*
   if(controller.GetBButtonPressed()){
     VerticalTurret.GetEncoder().SetPosition(45);
-    HorizontalTurret.GetEncoder().SetPosition(-PI/2+PI/4); //starting position is -90 degrees MIGHT CHANGE
+    HorizontalTurret.GetEncoder().SetPosition(-PI/2+PI/4); //starting position is -90 degrees
   }
-  */
 
   //Sets turret position to zero, and limtis rotational movement.
   /* Removing turret functionality
   if (controller2.GetPOV() == 90) {
     //right
     HorizontalTurret.Set(HorizontalSpeed);
-  } else if (controller2.GetPOV() == 270){
+  } else if (controller.GetPOV() == 270){
     //left
     HorizontalTurret.Set(-HorizontalSpeed);
-  } else if (controller2.GetPOV() == 180){
+  } else if (controller.GetPOV() == 180){
     //down TEMPORARY REMOVAL OF VERTICAL TURRET
     VerticalTurret.Set(VerticalSpeed);
     //Hang.Set(-HangSpeed);
-  } else if (controller2.GetPOV() == 0){
+  } else if (controller.GetPOV() == 0){
     //up TEMPORARY REMOVAL OF VERTICAL TURRET
     VerticalTurret.Set(-VerticalSpeed);
     //Hang.Set(HangSpeed);
+  } else if (controller.GetStartButton()) {
+    HorizontalTurret.GetEncoder().SetPosition(0);
   } else { //ensures autoalignment and manual turret movement are mutually exclusive
-    if(controller2.GetAButton()){
+    if(controller.GetAButton()){
       AlignTurret();
     } else {
       HorizontalTurret.StopMotor();
@@ -1320,19 +1319,20 @@ void TeleopPeriodic() {
   //controller triggers set indexer velocity
   if(controller.GetLeftTriggerAxis()){
     Indexer.Set(-IndexerSpeed);
+    Hopper.Set(HopperSpeed);
   } else if (controller.GetRightTriggerAxis()){
     Indexer.Set(IndexerSpeed);
+    Hopper.Set(-HopperSpeed);
   } else {
     Indexer.StopMotor();
   }
 
 
-  //controller triggers set indexer velocity
+    //controller triggers set indexer velocity
   if(controller.GetLeftBumper()){
-   Intake.Set(-IntakeSpeed);
-  } else if (controller.GetRightBumper()){
-    Intake.Set(IntakeSpeed);
-  } else { 
+   Intake.Set(-0.7);
+   Hopper.Set(HopperSpeed);
+  } else {
     Intake.StopMotor();
   }
 
