@@ -191,7 +191,7 @@ class Robot : public frc::TimedRobot {
     m_frontLeftLocation, m_frontRightLocation, m_backLeftLocation,
         m_backRightLocation};
   frc::XboxController controller{0};
-  //frc::XboxController controller2{1}; maybe use later
+  frc::XboxController controller2{1};
 
   //limits acceleration to 6m/s^2
   frc::SlewRateLimiter<units::meters_per_second> limitx{3_mps / .5_s};
