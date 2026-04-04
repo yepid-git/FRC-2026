@@ -72,9 +72,8 @@ class Robot : public frc::TimedRobot {
   double VerticalSpeed = 0.1; 
   double HorizontalSpeed = 0.1;
   double IndexerSpeed = 1;
-  double HopperSpeed = 0.4; 
+  double HopperSpeed = 0.6; 
   double HangSpeed = 0.5;
-  double IntakeSpeed = 0.7;
 
   //member for the last known angle, avoid bad gyro readings during disconnections (if happens)
   double lastKnownAngle = 0.0;
@@ -191,8 +190,8 @@ class Robot : public frc::TimedRobot {
   frc::SwerveDriveKinematics<4> kinematics{
     m_frontLeftLocation, m_frontRightLocation, m_backLeftLocation,
         m_backRightLocation};
-  frc::XboxController controller{0}; //1st controller: drive, intake, indexer, reset functionalities
-  frc::XboxController controller2{1}; //2nd controller: shoot wheels, horizontal & vertical turret, auto turret, hopper (forwards/backwards)
+  frc::XboxController controller{0};
+  //frc::XboxController controller2{1}; maybe use later
 
   //limits acceleration to 6m/s^2
   frc::SlewRateLimiter<units::meters_per_second> limitx{3_mps / .5_s};
@@ -390,7 +389,7 @@ void RobotInit(){
   driveConfig.SmartCurrentLimit(40);        // each drive wheel
   steerConfig.SmartCurrentLimit(40);        // each steer motor
   HangConfig.SmartCurrentLimit(40);
-  hopperConfig.SmartCurrentLimit(20);
+  hopperConfig.SmartCurrentLimit(30);
   HorizontalTurretConfig.SmartCurrentLimit(15);
   VerticalTurretConfig.SmartCurrentLimit(15);
   
@@ -565,8 +564,8 @@ void RobotInit(){
     getRobotRelativeSpeeds,
     driveRobotRelative,
     std::make_shared<pathplanner::PPHolonomicDriveController>(
-        pathplanner::PIDConstants(5.0, 0.0, 0.0), //translational pid
-        pathplanner::PIDConstants(3.0, 0.0, 0.1) //rotational pid
+        pathplanner::PIDConstants(7.5, 0.15, 0.0), //translational pid
+        pathplanner::PIDConstants(5.5, 0.2, 0.0) //rotational pid
     ),
     config,
     []() {
@@ -778,7 +777,7 @@ auto makeStopIntakeCommand = [this]() {
 
 auto makeSpinFlywheelCommand = [this]() {
   return frc2::cmd::RunOnce([this]() {
-      pidfiresh.SetReference(2100, rev::spark::SparkBase::ControlType::kVelocity);
+      pidfiresh.SetReference(1700, rev::spark::SparkBase::ControlType::kVelocity);
   });
 };
 
@@ -807,6 +806,11 @@ auto makeSpinHopperCommand = [this]() {
   });
 };
 
+auto makeSpinHopperRevCommand = [this]() {
+  return frc2::cmd::RunOnce([this]() {
+      Hopper.Set(HopperSpeed);
+  });
+};
 
 auto makeStopHopperCommand = [this]() {
   return frc2::cmd::RunOnce([this]() {
@@ -910,9 +914,10 @@ auto makeAlignTurretCommand = [this]() {
     //goes on the intake path
     .AndThen(pathplanner::AutoBuilder::followPath(redrightpathintake))
     //comes back and stops intake motors, while spinning up flywheel
-    .AndThen(pathplanner::AutoBuilder::followPath(redrightpathback).AlongWith(makeStopIntakeCommand().AlongWith(makeSpinFlywheelCommand())))
+    .AndThen(pathplanner::AutoBuilder::followPath(redrightpathback).AlongWith(makeSpinFlywheelCommand()))
     //spins indexer (shoots)
-    .AndThen(makeSpinIndexerCommand().AlongWith(makeSpinHopperCommand()))
+    .AndThen(makeSpinIndexerCommand().AlongWith(makeSpinHopperCommand()).AlongWith(makeStopIntakeCommand()))
+
     //wait 6 seconds 
     .AndThen(frc2::cmd::Wait(6_s)) 
     //stops everything
@@ -971,13 +976,13 @@ auto makeAlignTurretCommand = [this]() {
     //wait 3 seconds before stopping
     .AndThen(frc2::cmd::Wait(3_s)) 
     //After done, stop both indexer and flywheel
-    .AndThen(makeStopFlywheelCommand().AlongWith(makeStopIndexerCommand()).AlongWith(makeStopHopperCommand()))
+    .AndThen(makeStopFlywheelCommand().AlongWith(makeStopIndexerCommand()).AlongWith(makeStopHopperCommand()).AlongWith(makeSpinIntakeCommand()))
     //go to the pile
-    .AndThen(pathplanner::AutoBuilder::followPath(redcenterpile).AlongWith(makeSpinIntakeCommand()))
+    .AndThen(pathplanner::AutoBuilder::followPath(redcenterpile).AlongWith(makeSpinHopperRevCommand()))
     //goes on the intake path
     .AndThen(pathplanner::AutoBuilder::followPath(redcenterintake))
     //comes back and stops intake motors, while spinning up flywheel
-    .AndThen(pathplanner::AutoBuilder::followPath(redcenterpileback).AlongWith(makeStopIntakeCommand().AlongWith(makeSpinFlywheelCommand())))
+    .AndThen(pathplanner::AutoBuilder::followPath(redcenterpileback).AlongWith(makeSpinFlywheelCommand()))
     //spins indexer (shoots)
     .AndThen(makeSpinIndexerCommand().AlongWith(makeSpinHopperCommand()))
     //wait 6 seconds 
@@ -1204,31 +1209,31 @@ void TeleopPeriodic() {
     HorizontalTurret.GetEncoder().SetPosition(-PI);
   }
 
-  /*
   if(controller.GetBButtonPressed()){
     VerticalTurret.GetEncoder().SetPosition(45);
-    HorizontalTurret.GetEncoder().SetPosition(-PI/2+PI/4); //starting position is -90 degrees MIGHT CHANGE
+    HorizontalTurret.GetEncoder().SetPosition(-PI/2+PI/4); //starting position is -90 degrees
   }
-  */
 
   //Sets turret position to zero, and limtis rotational movement.
   /* Removing turret functionality
   if (controller2.GetPOV() == 90) {
     //right
     HorizontalTurret.Set(HorizontalSpeed);
-  } else if (controller2.GetPOV() == 270){
+  } else if (controller.GetPOV() == 270){
     //left
     HorizontalTurret.Set(-HorizontalSpeed);
-  } else if (controller2.GetPOV() == 180){
+  } else if (controller.GetPOV() == 180){
     //down TEMPORARY REMOVAL OF VERTICAL TURRET
     VerticalTurret.Set(VerticalSpeed);
     //Hang.Set(-HangSpeed);
-  } else if (controller2.GetPOV() == 0){
+  } else if (controller.GetPOV() == 0){
     //up TEMPORARY REMOVAL OF VERTICAL TURRET
     VerticalTurret.Set(-VerticalSpeed);
     //Hang.Set(HangSpeed);
+  } else if (controller.GetStartButton()) {
+    HorizontalTurret.GetEncoder().SetPosition(0);
   } else { //ensures autoalignment and manual turret movement are mutually exclusive
-    if(controller2.GetAButton()){
+    if(controller.GetAButton()){
       AlignTurret();
     } else {
       HorizontalTurret.StopMotor();
@@ -1286,8 +1291,8 @@ void TeleopPeriodic() {
   // }
 
   //shooter code
-  //actual rpm is targetrpm * 22/15
-  double targetrpm = 1700;
+  //actual rpm is targerpm * 22/15
+  double targetrpm = 1800;
 
   //if bumper is pressed, fire both motors at the target rpm, otherwise set their velocities to 0
   if(controller2.GetXButton() || controller.GetYButton()){
@@ -1304,27 +1309,30 @@ void TeleopPeriodic() {
   }
 
   // B Button toggles field oriented drive
+  /*
   if(controller.GetBButtonPressed()){
     fieldOriented = !fieldOriented;
   }
+    */
 
 
   //controller triggers set indexer velocity
   if(controller.GetLeftTriggerAxis()){
     Indexer.Set(-IndexerSpeed);
+    Hopper.Set(HopperSpeed);
   } else if (controller.GetRightTriggerAxis()){
     Indexer.Set(IndexerSpeed);
+    Hopper.Set(-HopperSpeed);
   } else {
     Indexer.StopMotor();
   }
 
 
-  //controller triggers set indexer velocity
+    //controller triggers set indexer velocity
   if(controller.GetLeftBumper()){
-   Intake.Set(-IntakeSpeed);
-  } else if (controller.GetRightBumper()){
-    Intake.Set(IntakeSpeed);
-  } else { 
+   Intake.Set(-0.7);
+   Hopper.Set(HopperSpeed);
+  } else {
     Intake.StopMotor();
   }
 
@@ -1481,7 +1489,7 @@ void Drive(double x, double y, double rotate){
   auto modules = kinematics.ToSwerveModuleStates(speeds);
 
   //safety to prevent wheels from spinning too fast
-  //kinematics.DesaturateWheelSpeeds(&modules, 5_mps);
+  kinematics.DesaturateWheelSpeeds(&modules, 10_mps);
 
   //just stores the swerve module states in each motor
   auto [fl, fr, bl, br] = modules;
