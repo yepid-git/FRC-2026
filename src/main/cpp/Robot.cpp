@@ -83,7 +83,7 @@ class Robot : public frc::TimedRobot {
   frc::PIDController headingPID{0.003, 0.0, 0.001};
 
 
-  double drivespeed = 5;
+  double drivespeed = 2;
 
   //member for the auto command
   frc2::CommandPtr autoCommand = frc2::cmd::None();
@@ -1254,6 +1254,7 @@ void TeleopPeriodic() {
   }
 
   //hopper code
+  /*
   if (controller2.GetRightTriggerAxis() || controller.GetPOV() == 90){
     Hopper.Set(HopperSpeed);
   } 
@@ -1265,6 +1266,7 @@ void TeleopPeriodic() {
     && controller.GetPOV() != 270 && controller.GetPOV() != 90) {
     Hopper.StopMotor();
 }
+    */
 
   if (controller.GetXButton()){
     xstop();
@@ -1292,9 +1294,10 @@ void TeleopPeriodic() {
 
   //shooter code
   //actual rpm is targerpm * 22/15
-  double targetrpm = 1800;
+  double targetrpm = 500;
 
   //if bumper is pressed, fire both motors at the target rpm, otherwise set their velocities to 0
+  /*
   if(controller2.GetXButton() || controller.GetYButton()){
     pidfiresh.SetReference(
         targetrpm,
@@ -1303,6 +1306,8 @@ void TeleopPeriodic() {
   } else {
     firesh.StopMotor();
   }
+    */
+  
 
   if(controller.GetAButtonPressed()){
     headingPID.Reset();
@@ -1318,13 +1323,16 @@ void TeleopPeriodic() {
 
   //controller triggers set indexer velocity
   if(controller.GetLeftTriggerAxis()){
+    firesh.StopMotor();
     Indexer.Set(-IndexerSpeed);
     Hopper.Set(HopperSpeed);
   } else if (controller.GetRightTriggerAxis()){
     Indexer.Set(IndexerSpeed);
     Hopper.Set(-HopperSpeed);
+    pidfiresh.SetReference(targetrpm, rev::spark::SparkBase::ControlType::kVelocity);
   } else {
     Indexer.StopMotor();
+    firesh.StopMotor();
   }
 
 
@@ -1489,7 +1497,7 @@ void Drive(double x, double y, double rotate){
   auto modules = kinematics.ToSwerveModuleStates(speeds);
 
   //safety to prevent wheels from spinning too fast
-  kinematics.DesaturateWheelSpeeds(&modules, 5_mps);
+  kinematics.DesaturateWheelSpeeds(&modules, 2_mps);
 
   //just stores the swerve module states in each motor
   auto [fl, fr, bl, br] = modules;
