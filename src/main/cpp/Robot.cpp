@@ -1166,9 +1166,7 @@ void AutonomousPeriodic() {
     }
   }
   */
-
   frc2::CommandScheduler::GetInstance().Run();
-
   
 }
 
