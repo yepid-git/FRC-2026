@@ -49,6 +49,9 @@
 
 
 class Robot : public frc::TimedRobot {
+
+  int shootState = 0;
+
   //field oriented toggle
   bool fieldOriented = true;
 
@@ -83,7 +86,7 @@ class Robot : public frc::TimedRobot {
   frc::PIDController headingPID{0.003, 0.0, 0.001};
 
 
-  double drivespeed = 2;
+  double drivespeed = 1;
 
   //member for the auto command
   frc2::CommandPtr autoCommand = frc2::cmd::None();
@@ -178,6 +181,8 @@ class Robot : public frc::TimedRobot {
   rev::spark::SparkBaseConfig hopperConfig{};
   
   frc::Timer time;
+
+  frc::Timer shootTimer;
 
 
   //object for roborio's built in accelerometer, returns acceleration on all 3-axes in terms of g-force (1g = 9.8 m/s^2)
@@ -1168,6 +1173,11 @@ void AutonomousPeriodic() {
 }
 
 void TeleopInit() {
+
+  shootState = 0;
+  shootTimer.Stop();
+  shootTimer.Reset();
+
   autoCommand.Cancel();
   ahrs->SetAngleAdjustment(0.0);
   lastKnownAngle = ahrs->GetAngle();
@@ -1307,6 +1317,30 @@ void TeleopPeriodic() {
     firesh.StopMotor();
   }
     */
+
+  if (controller.GetYButton()) {
+    if (shootState == 0) {
+        shootState = 1;
+        shootTimer.Reset();
+        shootTimer.Start();
+        pidfiresh.SetReference(1800, rev::spark::SparkBase::ControlType::kVelocity);
+        Indexer.StopMotor();
+        Hopper.StopMotor();
+    } else if (shootState == 1 && shootTimer.Get() >= 2_s) {
+        shootState = 2;
+        Indexer.Set(IndexerSpeed);
+        Hopper.Set(-HopperSpeed);
+    }
+} else {
+    if (shootState != 0) {
+        shootState = 0;
+        shootTimer.Stop();
+        shootTimer.Reset();
+        firesh.StopMotor();
+        Indexer.StopMotor();
+        Hopper.StopMotor();
+    }
+}
   
 
   if(controller.GetAButtonPressed()){
@@ -1330,11 +1364,10 @@ void TeleopPeriodic() {
     Indexer.Set(IndexerSpeed);
     Hopper.Set(-HopperSpeed);
     pidfiresh.SetReference(targetrpm, rev::spark::SparkBase::ControlType::kVelocity);
-  } else {
+  } else if (shootState == 0) {
     Indexer.StopMotor();
     firesh.StopMotor();
   }
-
 
     //controller triggers set indexer velocity
   if(controller.GetLeftBumper()){
