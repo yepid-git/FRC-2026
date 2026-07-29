@@ -299,10 +299,10 @@ void RobotInit(){
   shooterFollowerConfig
   .SetIdleMode(rev::spark::SparkBaseConfig::IdleMode::kCoast)
     .SetIdleMode(rev::spark::SparkBaseConfig::IdleMode::kCoast)
-    .VoltageCompensation(12.0)       // ADD
-    .SmartCurrentLimit(100)          // ADD
-    .ClosedLoopRampRate(0.1)         // ADD
-    .OpenLoopRampRate(0.1)           // ADD
+    .VoltageCompensation(12.0)       
+    .SmartCurrentLimit(100)          
+    .ClosedLoopRampRate(0.1)        
+    .OpenLoopRampRate(0.1)           
     .Follow(firesh, true);
 
 
@@ -329,7 +329,7 @@ void RobotInit(){
   HorizontalTurretConfig.closedLoop
   .SetFeedbackSensor(rev::spark::FeedbackSensor::kPrimaryEncoder)
   .Pid(0.2, 0.0, 0.0)
-  .PositionWrappingEnabled(false) //experiment
+  .PositionWrappingEnabled(false)
   .PositionWrappingInputRange(-PI, PI)
   .OutputRange(-0.9, 0.9);
 
