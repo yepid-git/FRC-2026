@@ -1302,7 +1302,7 @@ void TeleopPeriodic() {
 
   //shooter code
   //actual rpm is targerpm * 22/15
-  double targetrpm = 500;
+  double targetrpm = 2000;
 
   //if bumper is pressed, fire both motors at the target rpm, otherwise set their velocities to 0
   /*
